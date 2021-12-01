@@ -1,0 +1,24 @@
+---
+title: "EDA"
+author: "Michael Xiao"
+date: "12/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir="/Users/mike/Desktop/senior_thesis")
+```
+
+```{r}
+require("sf")
+require(tidyverse)
+data = read_sf("Final_Data/cleaned.shp")
+data
+```
+```{r}
+ggplot(data=data) +
+  geom_sf(aes(fill=Sum_count, color=Sum_count)) +
+  scale_fill_gradient(low="grey", high="red") +
+  scale_color_gradient(low="grey", high="red")
+```
+
