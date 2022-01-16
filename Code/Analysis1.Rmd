@@ -23,8 +23,8 @@ require(gstat)
 require(iml)
 
 data = read_sf("data.shp")
-data$wf = as.numeric(data$wf_count>0)
-data$pb = as.numeric(data$pb_count>0)
+data$wf = as.integer(data$wf_count>0)
+data$pb = as.integer(data$pb_count>0)
 ```
 
 ```{r}
@@ -59,12 +59,19 @@ plot_map = function(data, var, type="c", direction=1) {
       scale_color_viridis_c(direction=direction)
   } else if (type == "d") {
     ggplot(data=data) +
-      geom_sf(aes(fill=!!sym(var), color=!!sym(var))) +
+      geom_sf(aes(fill=as.factor(!!sym(var)), color=as.factor(!!sym(var)))) +
       scale_fill_viridis_d(direction=direction) +
       scale_color_viridis_d(direction=direction)
   }
 }
 ```
+
+```{r}
+plot_map(data, "wf", "d")
+plot_map(data, "pb", "d")
+```
+
+
 
 ## Colinearity Check
 
@@ -106,5 +113,112 @@ summary(gam_naive)
 
 ```{r}
 plot(gam_naive, scale=0)
+```
+
+```{r}
+# spatial correlation analysis
+res = gam_naive$residuals
+data$res = res
+x = data$CENTROID_X
+y = data$CENTROID_Y
+vario = as.data.frame(cbind(res=res, x=x, y=y))
+v = variogram(res~1, data=data)
+
+v_dir = variogram(res~1, data=data, alpha=c(0,45,90,130))
+plot(v)
+plot(v_dir)
+plot_map(data %>% filter(res>0), "res", direction=-1)
+```
+
+
+
+```{r}
+colnames(data)
+ggplot(data=data, aes(x=tree, y=shrub)) +
+  geom_point(alpha=0.3)
+
+```
+
+## Re-Do analysis on grid cells where percent tree is greater than 50
+
+```{r}
+plot_map(data=data, var="tree")
+```
+
+```{r}
+# get these data
+data_tree = data %>% filter(tree > 0.5)
+
+# re-do collinearity check
+# first look at pairwise correlations
+tree_cov = st_drop_geometry(data_tree[,covariates])
+png("Plots/corr_heat_tree.png",width=5*length(covariates), height=3*length(covariates), units="cm", res=100)
+ggcorr(tree_cov, label=T, legend.size=30)
+dev.off()
+
+# drop elevation
+tree_dropped = rem_item(covariates, c("elevation"))
+data_tree_dropped = st_drop_geometry(data_tree[,cov_dropped])
+
+# compute vif of new set of covariates
+lin_form_tree = make_form(x=tree_dropped, no_smooth=tree_dropped)
+model_tree = lm(lin_form_tree, data=data_tree)
+vif(model_tree)
+
+# drop pPrivate
+tree_dropped2 = rem_item(tree_dropped, c("pPrivate"))
+lin_form_tree2 = make_form(x=tree_dropped2, no_smooth=tree_dropped2)
+model_tree2 = lm(lin_form_tree2, data=data_tree)
+vif(model_tree2)
+
+# save new covariates
+cov_cleaned_tree = tree_dropped2
+```
+
+```{r}
+ggplot(data=data_tree) +
+  geom_sf(color="blue")
+```
+
+
+```{r}
+# fit tree gam model
+tree_form = make_form(c("pb", cov_cleaned_tree))
+gam_tree = gam(tree_form, data=data_tree, family=binomial)
+
+summary(gam_tree)
+```
+```{r}
+plot(gam_tree, scale=0)
+```
+
+```{r}
+# spatial correlation analysis
+res = gam_tree$residuals
+data_tree$res = res
+x = data_tree$CENTROID_X
+y = data_tree$CENTROID_Y
+vario = as.data.frame(cbind(res=res, x=x, y=y))
+st_coordinates(vario) = c("x", "y")
+v = variogram(res~1, data=data_tree)
+
+v_dir = variogram(res~1, data=data_tree, alpha=c(0,45,90,130))
+plot(v)
+plot(v_dir)
+plot_map(data_tree %>% filter(res>0), "res", direction=-1)
+```
+
+
+```{r}
+bubble(data_tree, "res", col = c("black","grey"), main = "Residuals", xlab = "X-coordinates", ylab = "Y-coordinates")
+```
+
+## Try taking out not Federal, State, Private
+
+```{r}
+cov_lo = rem_item(covariates, c("elevation", "pCounty", "pCity", "pNP", "pSD"))
+lin_form_lo = make_form(x=c("pb",cov_lo), no_smooth=c("pb",cov_lo))
+model_tree = lm(lin_form_lo, data=data_tree)
+vif(model_tree) # no good
 ```
 
