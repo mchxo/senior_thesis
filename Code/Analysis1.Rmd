@@ -1,0 +1,110 @@
+---
+title: "Analysis1"
+author: "Michael Xiao"
+date: "12/29/2021"
+output: pdf_document
+---
+# Initial Analysis of Data Using Absence-Presence Model
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir="/Users/mike/Desktop/senior_thesis")
+```
+
+```{r}
+# load packages and data
+require("sf")
+require(tidyverse)
+require(ggbiplot)
+require(plotly)
+require(mgcv)
+require(GGally)
+require(car)
+require(gstat)
+require(iml)
+
+data = read_sf("data.shp")
+data$wf = as.numeric(data$wf_count>0)
+data$pb = as.numeric(data$pb_count>0)
+```
+
+```{r}
+# utilities
+covariates = colnames(data)[c(24:41,75:77,88:91)]
+
+# makes formula using x and y
+make_form = function(x=c("pb", covariates), y="wf", no_smooth=c("pb")) {
+  for (i in 1:length(x)) {
+    if (x[i] %in% no_smooth) {
+      next
+    } else {
+      x[i] = paste("s(", x[i], ")", sep="")
+    }
+  }
+  raw_form = paste(x, collapse=" + ")
+  return (formula(paste(y, " ~ ", raw_form)))
+}
+
+# removes feature from vector
+rem_item = function(vec, item) {
+  index = which(vec %in% item)
+  return (vec[-index])
+}
+
+# plot map with a single variable
+plot_map = function(data, var, type="c", direction=1) {
+  if (type == "c") {
+    ggplot(data=data) +
+      geom_sf(aes(fill=!!sym(var), color=!!sym(var))) +
+      scale_fill_viridis_c(direction=direction) +
+      scale_color_viridis_c(direction=direction)
+  } else if (type == "d") {
+    ggplot(data=data) +
+      geom_sf(aes(fill=!!sym(var), color=!!sym(var))) +
+      scale_fill_viridis_d(direction=direction) +
+      scale_color_viridis_d(direction=direction)
+  }
+}
+```
+
+## Colinearity Check
+
+```{r}
+# first look at pairwise correlations
+data_cov = st_drop_geometry(data[,covariates])
+png("Plots/corr_heat.png",width=5*length(covariates), height=3*length(covariates), units="cm", res=100)
+ggcorr(data_cov, label=T, legend.size=30)
+dev.off()
+
+# drop pPrivate, perc_cloud
+cov_dropped = rem_item(covariates, c("pPrivate", "perc_cloud"))
+data_dropped = st_drop_geometry(data[,cov_dropped])
+
+# compute vif of new set of covariates
+lin_form = make_form(x=cov_dropped, no_smooth=cov_dropped)
+model = lm(lin_form, data=data)
+vif(model)
+
+# drop vpmax, elevation
+cov_dropped2 = rem_item(cov_dropped, c("vpmax", "elevation"))
+lin_form2 = make_form(x=cov_dropped2, no_smooth=cov_dropped2)
+model2 = lm(lin_form2, data=data)
+vif(model2)
+
+# save new covariates
+cov_cleaned = cov_dropped2
+```
+
+## Initial Fitting and Diagnosis of a Naive GAM Model
+
+```{r}
+naive_form = make_form(c("pb", cov_cleaned))
+gam_naive = gam(naive_form, data=data, family=binomial)
+
+summary(gam_naive)
+```
+
+
+```{r}
+plot(gam_naive, scale=0)
+```
+
