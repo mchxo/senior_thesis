@@ -22,7 +22,7 @@ require(car)
 require(gstat)
 require(iml)
 
-data = read_sf("data.shp")
+data = read_sf("Final_Data/data.shp")
 data$wf = as.integer(data$wf_count>0)
 data$pb = as.integer(data$pb_count>0)
 ```
@@ -227,7 +227,7 @@ vif(model_tree) # no good
 
 ```{r}
 # remove temp, pPrivate, coordiantes
-cov_no_temp = rem_item(covariates, c("temp", "pPrivate", "CENTROID_X", "CENTROID_Y"))
+cov_no_temp = rem_item(covariates, c("temp", "pPrivate", "CENTROID_Y"))
 lin_form_nt = make_form(x=c("pb", cov_no_temp), no_smooth=c("pb", cov_no_temp))
 model_nt = lm(lin_form_nt, data=data)
 vif(model_nt)
@@ -247,6 +247,83 @@ summary(gam_nt)
 ```
 
 ```{r}
-plot(gam_nt, scale=0)
+plot(gam_nt, scale=0, rug=T)
 ```
+
+```{r}
+# spatial correlation
+res = gam_nt$residuals
+data$res = res
+x = data$CENTROID_X
+y = data$CENTROID_Y
+vario = as.data.frame(cbind(res=res, x=x, y=y))
+v = variogram(res~1, data=data)
+
+v_dir = variogram(res~1, data=data, alpha=c(0,45,90,130))
+plot(v)
+plot(v_dir)
+plot_map(data %>% filter(res>0), "res", direction=-1)
+```
+
+## Replace individual coordiantes with interaction of the two
+
+```{r}
+cov_tree1 = c(rem_item(cov_cleaned_tree, c("CENTROID_X", "CENTROID_Y")), "CENTROID_X, CENTROID_Y")
+tree_form2 = make_form(x=c("pb", cov_tree1), y="wf")
+
+gam_co_int = gam(tree_form2, data=data_tree, family=binomial)
+
+summary(gam_co_int)
+```
+
+```{r}
+plot(gam_co_int, scale=0)
+```
+
+
+```{r}
+# now try the same thing for overall
+cov1 = c(rem_item(cov_cleaned, c("CENTROID_X", "CENTROID_Y")), "CENTROID_X, CENTROID_Y")
+form2 = make_form(x=c("pb", cov1), y="wf")
+
+gam_int = gam(form2, data=data, family=binomial)
+
+summary(gam_int)
+```
+
+```{r}
+plot(gam_int, scale=0)
+```
+
+```{r}
+vis.gam(gam_int)
+```
+
+```{r}
+# fit a gam for each individual variable
+covariates
+```
+
+```{r}
+model = gam(wf~s(ppt)+0, data=data, family=binomial)
+summary(model)$s.table
+
+sig_table = list()
+for (c in covariates) {
+  f = formula(paste("wf~s(", c, ")+0", sep=""))
+  model = gam(f, data=data, family=binomial)
+  #plot(model)
+  sig = summary(model)$s.table
+  sig_table[[c]] = sig
+}
+do.call(rbind, sig_table)
+```
+
+```{r}
+sig_table
+```
+
+
+
+
 
