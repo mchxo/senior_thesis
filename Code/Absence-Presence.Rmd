@@ -1,0 +1,124 @@
+---
+title: "Absence-Presence"
+output: html_document
+---
+
+```{r setup}
+knitr::opts_knit$set(root.dir="/home/michael_xiao/T/st")
+```
+
+```{r}
+require("sf")
+require(tidyverse)
+require(ggbiplot)
+require(plotly)
+require(mgcv)
+require(GGally)
+require(car)
+require(gstat)
+require(iml)
+
+
+data = read_sf("data.shp")
+data$wf = as.numeric(data$wf_count > 0)
+data$pb = as.numeric(data$pb_count > 0)
+```
+
+```{r}
+
+st_centroid(data) %>% st_coordinates()
+proj_data = st_transform(data, crs=4326)
+coords = st_centroid(proj_data) %>% st_coordinates()
+
+data$x = coords[,1]
+data$y = coords[,2]
+
+colnames(data)
+```
+
+```{r}
+cov_initial = colnames(data)[c(24:25, 26:41, 75:77, 88:89, 104, 105)]
+cov_lin = paste(cov_initial, collapse = " + ")
+lin_form = formula(paste("wf ~ pb + ", cov_lin, sep=""))
+
+lin_mod = lm(lin_form, data=df)
+
+vif(lin_mod)
+```
+
+
+
+```{r}
+covariates = colnames(data)[c(24, 26:32, 39:41, 75:77, 88:89, 104, 105)] # 33-38, 25:temp
+covariates
+```
+
+```{r}
+cov_add = paste(paste("s(", covariates, ")", sep=""), collapse = " + ")
+naive_form = formula(paste("wf ~ pb + ", cov_add, sep=""))
+df = data %>% st_drop_geometry()
+
+bino = gam(naive_form, data=df, family="binomial")
+
+summary(bino)
+plot(bino, scale=F)
+naive_form
+
+pairs(df[,covariates])
+```
+
+```{r}
+summary(bino)
+```
+
+```{r}
+res = bino$residuals
+fv = bino$fitted.values
+
+qqnorm(res)
+qqline(res)
+
+plot(fv)
+
+hist(res)
+
+max(res)
+```
+
+
+```{r}
+toPlot = data[,c("index", "geometry")]
+toPlot$res = res
+toPlot$fv = fv
+
+ggplot(data=toPlot) +
+  geom_sf(aes(fill=res, color=res)) +
+  scale_fill_viridis_c(trans = "log") +
+  scale_color_viridis_c(trans = "log")
+```
+
+```{r}
+vario = as.data.frame(cbind(res=res, x=data$x, y=data$y))
+v = variogram(res~1, loc= ~x+y, data=vario)
+
+
+v2 = variogram(res~1, loc= ~x+y, data=vario, alpha=c(0,45,90,135))
+plot(v)
+plot(v2)
+```
+
+```{r}
+cov_add = paste(paste("s(", covariates, ")", sep=""), collapse = " + ")
+naive_form = formula(paste("wf ~ pb + ", cov_add, sep=""))
+df = data %>% st_drop_geometry()
+
+
+gaus = gam(naive_form, data=df)
+bino = gam(naive_form, data=df, family="binomial")
+summary(gaus)
+summary(bino)
+plot(bino)
+```
+
+
+

@@ -7,7 +7,7 @@ output: pdf_document
 # Initial Analysis of Data Using Absence-Presence Model
 
 ```{r setup, include=FALSE}
-knitr::opts_knit$set(root.dir="/Users/mike/Desktop/senior_thesis")
+knitr::opts_knit$set(root.dir="/home/michael_xiao/T/st")
 ```
 
 ```{r}
@@ -66,7 +66,9 @@ plot_map = function(data, var, type="c", direction=1) {
 }
 ```
 
-```{r}
+```
+
+{r}
 plot_map(data, "wf", "d")
 plot_map(data, "pb", "d")
 ```
@@ -112,7 +114,7 @@ summary(gam_naive)
 
 
 ```{r}
-plot(gam_naive, scale=0)
+plot(gam_naive, scale=0, rug=T)
 ```
 
 ```{r}
@@ -188,6 +190,7 @@ gam_tree = gam(tree_form, data=data_tree, family=binomial)
 
 summary(gam_tree)
 ```
+
 ```{r}
 plot(gam_tree, scale=0)
 ```
@@ -199,7 +202,6 @@ data_tree$res = res
 x = data_tree$CENTROID_X
 y = data_tree$CENTROID_Y
 vario = as.data.frame(cbind(res=res, x=x, y=y))
-st_coordinates(vario) = c("x", "y")
 v = variogram(res~1, data=data_tree)
 
 v_dir = variogram(res~1, data=data_tree, alpha=c(0,45,90,130))
@@ -213,12 +215,38 @@ plot_map(data_tree %>% filter(res>0), "res", direction=-1)
 bubble(data_tree, "res", col = c("black","grey"), main = "Residuals", xlab = "X-coordinates", ylab = "Y-coordinates")
 ```
 
-## Try taking out not Federal, State, Private
+## Try taking out not Federal, State, Private (no good)
 
 ```{r}
 cov_lo = rem_item(covariates, c("elevation", "pCounty", "pCity", "pNP", "pSD"))
 lin_form_lo = make_form(x=c("pb",cov_lo), no_smooth=c("pb",cov_lo))
 model_tree = lm(lin_form_lo, data=data_tree)
 vif(model_tree) # no good
+```
+## Try taking out temp
+
+```{r}
+# remove temp, pPrivate, coordiantes
+cov_no_temp = rem_item(covariates, c("temp", "pPrivate", "CENTROID_X", "CENTROID_Y"))
+lin_form_nt = make_form(x=c("pb", cov_no_temp), no_smooth=c("pb", cov_no_temp))
+model_nt = lm(lin_form_nt, data=data)
+vif(model_nt)
+
+# nt_cov = st_drop_geometry(data[,cov_no_temp])
+# png("Plots/corr_heat_nt.png",width=5*length(cov_no_temp), height=3*length(cov_no_temp), units="cm", res=100)
+# ggcorr(nt_cov, label=T, legend.size=30)
+# dev.off()
+```
+
+```{r}
+# fit gam
+nt_form = make_form(c("pb", cov_no_temp))
+gam_nt = gam(nt_form, data=data, family=binomial)
+
+summary(gam_nt)
+```
+
+```{r}
+plot(gam_nt, scale=0)
 ```
 
