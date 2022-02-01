@@ -277,7 +277,9 @@ summary(gam_co_int)
 ```
 
 ```{r}
+png("Plots/xyInter/xyInter%03d.png")
 plot(gam_co_int, scale=0)
+dev.off()
 ```
 
 
@@ -296,7 +298,7 @@ plot(gam_int, scale=0)
 ```
 
 ```{r}
-vis.gam(gam_int)
+vis.gam(gam_int, c("temp", "ppt"))
 ```
 
 ```{r}
@@ -305,25 +307,122 @@ covariates
 ```
 
 ```{r}
-model = gam(wf~s(ppt)+0, data=data, family=binomial)
-summary(model)$s.table
-
 sig_table = list()
 for (c in covariates) {
   f = formula(paste("wf~s(", c, ")+0", sep=""))
-  model = gam(f, data=data, family=binomial)
-  #plot(model)
+  model = gam(f, data=data_tree, family=binomial)
+  png(paste("Plots/individuals/", c, ".png", sep=""))
+  plot(model)
+  dev.off()
   sig = summary(model)$s.table
   sig_table[[c]] = sig
 }
 do.call(rbind, sig_table)
+
+```
+
+## Interact temp with ppt
+```{r}
+cov_tree1
+cov_tree_pt = c("ppt,temp",rem_item(cov_tree1, c("ppt", "temp")))
+tree_form_pt = make_form(x=c("pb", cov_tree_pt))
+
+gam_pt = gam(tree_form_pt, data=data_tree, family=binomial)
+
+summary(gam_pt)
 ```
 
 ```{r}
-sig_table
+plot(gam_pt, scale=0)
 ```
 
 
+## Dropping insignificant variables
+```{r}
+# drop pNP, pSD, aspect
+cov_drop1 = rem_item(cov_tree1, c("pNP", "pSD", "aspect"))
+tree_drop_form1 = make_form(x=c("pb", cov_drop1), y="wf")
+gam_drop1 = gam(tree_drop_form1, data=data_tree, family=binomial)
 
 
+# drop dRoad
+cov_drop2 = rem_item(cov_drop1, c("dRoad"))
+tree_drop_form2 = make_form(x=c("pb", cov_drop2), y="wf")
+gam_drop2 = gam(tree_drop_form2, data=data_tree, family=binomial)
+summary(gam_drop1)
+summary(gam_drop2)
+
+```
+
+
+## Sptial correlation after interacting x,y
+```{r}
+# spatial correlation
+res = gam_co_int$residuals
+data_tree$res = res
+x = data$CENTROID_X
+y = data$CENTROID_Y
+vario = as.data.frame(cbind(res=res, x=x, y=y))
+v = variogram(res~1, data=data_tree)
+
+v_dir = variogram(res~1, data=data_tree, alpha=c(0,45,90,130))
+plot(v)
+plot(v_dir)
+
+```
+
+## Fix degrees to combat overfitting
+```{r}
+# start with pFederal
+
+png("Plots/pFederal_wiggle/pFed%03d.png")
+gam_fed = gam(wf~s(pFederal), data=data_tree, family="binomial")
+plot(gam_fed, scale=0)
+
+gam_fed3 = gam(wf~s(pFederal, k=3), data=data_tree, family="binomial")
+plot(gam_fed3, scale=0, main="k=3")
+
+gam_fed4 = gam(wf~s(pFederal, k=4), data=data_tree, family="binomial")
+plot(gam_fed4, scale=0, main="k=4")
+
+gam_fed5 = gam(wf~s(pFederal, k=5), data=data_tree, family="binomial")
+plot(gam_fed5, scale=0, main="k=5")
+
+gam_fed6 = gam(wf~s(pFederal, k=6), data=data_tree, family="binomial")
+plot(gam_fed6, scale=0, main="k=6")
+
+gam_fed7 = gam(wf~s(pFederal, k=7), data=data_tree, family="binomial")
+plot(gam_fed7, scale=0, main="k=7")
+
+gam_fed8 = gam(wf~s(pFederal, k=8), data=data_tree, family="binomial")
+plot(gam_fed8, scale=0, main="k=8")
+
+gam_fed9 = gam(wf~s(pFederal, k=9), data=data_tree, family="binomial")
+plot(gam_fed9, scale=0, main="k=9")
+
+gam_fed10 = gam(wf~s(pFederal, k=10), data=data_tree, family="binomial")
+plot(gam_fed10, scale=0, main="k=10")
+
+dev.off()
+```
+
+```{r}
+# see how the fix affects the overall model
+cov_pFed = c("pFederal, k=7", rem_item(cov_tree1, c("pFederal")))
+form_pFed = make_form(c("pb", cov_pFed))
+gam_pFed = gam(form_pFed, data=data_tree, family=binomial)
+summary(gam_pFed)
+```
+
+```{r}
+plot(gam_pFed, scale=0)
+```
+
+
+## potentially adding in shrub percentage as well
+```{r}
+data_ts = data %>% filter((tree > 0.5)|(shrub > 0.6))
+ggplot(data=data_ts) +
+  geom_sf(color="blue")
+```
 
