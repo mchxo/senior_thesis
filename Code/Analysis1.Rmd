@@ -333,7 +333,8 @@ summary(gam_pt)
 ```
 
 ```{r}
-plot(gam_pt, scale=0)
+#plot(gam_pt, scale=0, )
+vis.gam(gam_pt, view=c("temp", "ppt"),plot.type="contour",color="topo")
 ```
 
 
@@ -425,4 +426,101 @@ data_ts = data %>% filter((tree > 0.5)|(shrub > 0.6))
 ggplot(data=data_ts) +
   geom_sf(color="blue")
 ```
+
+```{r}
+gam_pFed = gam(form_pFed, data=data_tree, family=binomial, select=TRUE)
+summary(gam_pFed)
+```
+
+```{r}
+plot(gam_pFed,scale=0)
+```
+
+```{r}
+
+formula("wf ~ pb + s(pFederal, k = 7) + s(ppt) + s(temp) + s(vpmax) + 
+    s(vpmin) + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pState) + 
+    s(pCounty) + s(dTrail) + 
+    s(dPowerLine) + s(shrub) + s(tree) + s(herb) + s(slope) + 
+    s(CENTROID_X, CENTROID_Y)")
+form_pFed
+```
+
+```{r}
+# initial fitting of tree and shrub
+form_ts = make_form(c("pb", cov_tree1))
+gam_ts = gam(form_ts, data=data_ts, family=binomial, select=T)
+summary(gam_ts)
+```
+```{r}
+# remove insignificant terms
+form_ts2 = formula("wf ~ pb + s(ppt) + s(temp) + s(vpmax) + s(vpmin) + s(perc_cloud) + 
+    s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + 
+    s(pCity) +  s(pSD) + s(dTrail) + s(dPowerLine) + 
+    s(shrub) + s(tree) + s(herb) + s(slope) +  s(CENTROID_X, 
+    CENTROID_Y)")
+gam_ts2 = gam(form_ts2, data=data_ts, family=binomial, select=T)
+summary(gam_ts2)
+```
+
+```{r}
+plot(gam_ts2, scale=0, rug=T)
+```
+
+```{r}
+# fix wiggleness
+form_ts2 = formula("wf ~ pb + s(ppt) + s(temp) + s(vpmax) + s(vpmin) + s(perc_cloud) + 
+    s(wind_speed) + s(pop_den, bs='ts') + s(pFederal) + s(pState) + 
+    s(pCity) +  s(pSD) + s(dTrail) + s(dPowerLine) + 
+    s(shrub) + s(tree) + s(herb) + s(slope) +  s(CENTROID_X, 
+    CENTROID_Y)")
+gam_ts2 = gam(form_ts2, data=data_ts, family=binomial, select=T)
+summary(gam_ts2)
+```
+
+```{r}
+plot(gam_ts2, scale=0, rug=T)
+```
+
+```{r}
+form_ts3 = formula("wf ~ pb + s(ppt) + s(temp) + s(vpmax) + s(vpmin) + s(perc_cloud) + 
+    s(wind_speed) + s(pop_den, bs='ts') + s(pState) +  s(pFederal, bs='ts') +
+    s(pCity) +  s(pSD) + s(dTrail) + s(dPowerLine) + 
+    s(shrub) + s(tree) + s(herb) + s(slope) +  s(CENTROID_X, 
+    CENTROID_Y)")
+gam_ts3 = gam(form_ts3, data=data_ts, family=binomial, select=T)
+summary(gam_ts3)
+```
+
+```{r}
+AIC(gam_ts)
+AIC(gam_ts2)
+AIC(gam_ts3)
+```
+
+```{r}
+plot(gam_ts3, scale=0, rug=T)
+```
+
+```{r}
+# spatial correlation
+res = gam_ts3$residuals
+data_ts$res = res
+x = data_ts$CENTROID_X
+y = data_ts$CENTROID_Y
+vario = as.data.frame(cbind(res=res, x=x, y=y))
+v = variogram(res~1, data=data_ts)
+
+v_dir = variogram(res~1, data=data_ts, alpha=c(0,45,90,130))
+plot(v)
+plot(v_dir)
+
+```
+
+```{r}
+data_ts
+```
+
+
+
 
