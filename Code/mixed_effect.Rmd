@@ -1,0 +1,107 @@
+---
+title: "mixed_effects_analysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir="/home/michael_xiao/T/st")
+getwd()
+```
+
+```{r}
+# load packages and data
+require("sf")
+require(tidyverse)
+require(plotly)
+require(mgcv)
+require(GGally)
+require(car)
+require(gstat)
+require(iml)
+
+data = read_sf("/home/michael_xiao/T/st/Final_Data/data.shp")
+data = data %>% filter((tree > 0.5)|(shrub > 0.6))
+data = data %>% rename(y2010.pPBA=pPBA10, y2011.pPBA=pPBA11, y2012.pPBA=pPBA12, y2013.pPBA=pPBA13, 
+                       y2014.pPBA=pPBA14, y2015.pPBA=pPBA15, y2016.pPBA=pPBA16, y2017.pPBA=pPBA17, 
+                       y2018.pPBA=pPBA18, y2019.pPBA=pPBA19,
+                       y2010.wf = wf2010, y2011.wf = wf2011, y2012.wf = wf2012, y2013.wf = wf2013, 
+                       y2014.wf = wf2014, y2015.wf = wf2015, y2016.wf = wf2016, y2017.wf = wf2017, 
+                       y2018.wf = wf2018, y2019.wf = wf2019, 
+                       y2011.pb = pb2011, y2012.pb = pb2012, y2013.pb = pb2013, y2014.pb = pb2014, 
+                       y2015.pb = pb2015, y2016.pb = pb2016, y2017.pb = pb2017, y2018.pb = pb2018, 
+                       y2019.pb = pb2019, y2010.pb = pb2010, 
+                       y2010.pWFA = pWFA2010, y2011.pWFA = pWFA2011, y2012.pWFA = pWFA2012, y2013.pWFA = pWFA2013, 
+                       y2014.pWFA = pWFA2014, y2015.pWFA = pWFA2015, y2016.pWFA = pWFA2016, y2017.pWFA = pWFA2017, 
+                       y2018.pWFA = pWFA2018, y2019.pWFA = pWFA2019)
+```
+
+
+
+
+
+```{r}
+# drop monthly wf, pb, wf_count, pb_count, annual_wf, sd_wf, nMonth_wf, annual_pb, sd_pb, wf
+drops = c(paste("wf", 1:12, sep=""), paste("pb", 1:12, sep=""), "wf_count", "pb_count", "annual_wf", 
+          "sd_wf", "nMonth_wf", "annual_pb", "sd_pb","nMonth_pb", "pb_score", "fire_score")
+data = data[,!names(data) %in% drops]
+data = st_drop_geometry(data)
+
+# reshape data
+dataLong = data %>% 
+  pivot_longer(starts_with("y"), names_to=c("year", ".value"), names_pattern="y(201\\d).(wf|pb|pPBA|pWFA)")
+
+dataLong$year = as.factor(dataLong$year)
+dataLong$wf = as.numeric(dataLong$pWFA > 0)
+```
+
+"s(ppt) + s(temp) + s(vpmax) + s(vpmin) + s(elevation) + s(perc_cloud) + s(wind_speed) + s(pop_den) +
+    s(pFederal) + s(pState) + s(pCounty) + s(pCity) + s(pNP) + s(pSD) + s(pPrivate) + s(dRoad) + s(dTrail) +
+    s(dPowerLine) + s(shrub) + s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X) + s(CENTROID_Y) + year + s(pPBA)"
+    
+  "ppt + temp + vpmax + vpmin + elevation + perc_cloud + wind_speed + pop_den + pFederal + pState + pCounty + pCity + pNP + pSD + pPrivate + dRoad + dTrail + dPowerLine + shrub + tree + herb + slope + aspect + CENTROID_X + CENTROID_Y + year + pPBA"
+
+```{r}
+# vif analysis
+# removed: vpmax, all but pFederal and pState, elevation, shrub
+vif_form = formula(paste("wf~", "ppt + temp + vpmin  + perc_cloud + wind_speed + pop_den + pFederal + pState +dRoad + dTrail + dPowerLine + tree + herb + slope + aspect + CENTROID_X + CENTROID_Y + pPBA", sep=""))
+vif_model = lm(vif_form, data=dataLong)
+car::vif(vif_model)
+```
+
+
+
+
+
+```{r}
+# fit naive gam: make formula
+naive_vars = colnames(dataLong)[-which(colnames(dataLong) == "wf" | colnames(dataLong) == "pWFA" | colnames(dataLong) == "pb")]
+for_pasting = paste(paste("s(", naive_vars, ")", sep=""), collapse=" + ")
+naive_form = formula(paste("wf~",   "s(ppt) + s(temp) + s(vpmin) + s(perc_cloud) + s(wind_speed) + 
+s(pop_den) +
+    s(pFederal) + s(pState) + s(dRoad) + s(dTrail) +
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y) + 
+    s(year, bs='re') + s(pPBA)", sep=""))
+
+naive_form
+```
+```{r}
+# fit naive gam: fitting
+naive_gam = gam(naive_form, data=dataLong, family=binomial, stringAsFactors=T)
+summary(naive_gam)
+```
+
+```{r}
+naive_gam$coefficients
+```
+
+
+
+
+
+
+
+
+```{r}
+plot(naive_gam, scale=0)
+```
+
