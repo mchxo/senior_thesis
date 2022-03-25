@@ -8,6 +8,11 @@ knitr::opts_knit$set(root.dir="/home/michael_xiao/T/st")
 getwd()
 ```
 
+
+
+
+
+
 ```{r}
 # load packages and data
 require("sf")
@@ -19,7 +24,7 @@ require(car)
 require(gstat)
 require(iml)
 
-data = read_sf("/home/michael_xiao/T/st/Final_Data/data.shp")
+data = read_sf("/home/michael_xiao/R/s/Final_Data/update_data2.shp")
 data = data %>% filter((tree > 0.5)|(shrub > 0.6))
 data = data %>% rename(y2010.pPBA=pPBA10, y2011.pPBA=pPBA11, y2012.pPBA=pPBA12, y2013.pPBA=pPBA13, 
                        y2014.pPBA=pPBA14, y2015.pPBA=pPBA15, y2016.pPBA=pPBA16, y2017.pPBA=pPBA17, 
@@ -32,9 +37,38 @@ data = data %>% rename(y2010.pPBA=pPBA10, y2011.pPBA=pPBA11, y2012.pPBA=pPBA12, 
                        y2019.pb = pb2019, y2010.pb = pb2010, 
                        y2010.pWFA = pWFA2010, y2011.pWFA = pWFA2011, y2012.pWFA = pWFA2012, y2013.pWFA = pWFA2013, 
                        y2014.pWFA = pWFA2014, y2015.pWFA = pWFA2015, y2016.pWFA = pWFA2016, y2017.pWFA = pWFA2017, 
-                       y2018.pWFA = pWFA2018, y2019.pWFA = pWFA2019)
+                       y2018.pWFA = pWFA2018, y2019.pWFA = pWFA2019,
+                       y2010.temp = Avg_y2010_, y2011.temp = Avg_y2011_, y2012.temp = Avg_y2012_, y2013.temp = Avg_y2013_, 
+                       y2014.temp = Avg_y2014_, y2015.temp = Avg_y2015_, y2016.temp = Avg_y2016_, y2017.temp = Avg_y2017_, 
+                       y2018.temp = Avg_y2018_, y2019.temp = Avg_y2019_, 
+                       precip = ppt, temperature = temp)
 ```
 
+```{r}
+# read in fire data
+fire = read_sf("/home/michael_xiao/R/s/fire_data/fire20_1.gdb", layer="firep20_1")
+fire$YEAR_ = as.numeric(fire$YEAR_)
+fire = fire %>% filter((YEAR_ >= 2010) & (YEAR_ <= 2019))
+
+# clip fire
+
+```
+
+```{r}
+# encode lags
+for (y in 2013:2019) {
+  data[,paste("y", y, ".pb1Prev", sep="")] = data[,paste("y", y-1, ".pPBA", sep="")] %>% st_drop_geometry() %>% pull()
+  data[,paste("y", y, ".pb2Prev", sep="")] = data[,paste("y", y-2, ".pPBA", sep="")] %>% st_drop_geometry() %>% pull()
+  data[,paste("y", y, ".pb3Prev", sep="")] = data[,paste("y", y-3, ".pPBA", sep="")] %>% st_drop_geometry() %>% pull()
+}
+
+# shift aspect
+data$aspect = abs(180 - abs(data$aspect-225))
+
+data.cent = data$geometry %>% st_centroid() %>% st_coordinates()
+data$CENTROID_X = data.cent[,1]
+data$CENTROID_Y = data.cent[,2]
+```
 
 
 
@@ -48,11 +82,17 @@ data = st_drop_geometry(data)
 
 # reshape data
 dataLong = data %>% 
-  pivot_longer(starts_with("y"), names_to=c("year", ".value"), names_pattern="y(201\\d).(wf|pb|pPBA|pWFA)")
+  pivot_longer(starts_with("y"), names_to=c("year", ".value"), names_pattern="y(201\\d)[\\.|_](.*)")
 
+dataLong = dataLong %>% filter(year >= 2013)
 dataLong$year = as.factor(dataLong$year)
 dataLong$wf = as.numeric(dataLong$pWFA > 0)
+dataLong
 ```
+
+
+
+
 
 "s(ppt) + s(temp) + s(vpmax) + s(vpmin) + s(elevation) + s(perc_cloud) + s(wind_speed) + s(pop_den) +
     s(pFederal) + s(pState) + s(pCounty) + s(pCity) + s(pNP) + s(pSD) + s(pPrivate) + s(dRoad) + s(dTrail) +
@@ -76,17 +116,17 @@ car::vif(vif_model)
 # fit naive gam: make formula
 naive_vars = colnames(dataLong)[-which(colnames(dataLong) == "wf" | colnames(dataLong) == "pWFA" | colnames(dataLong) == "pb")]
 for_pasting = paste(paste("s(", naive_vars, ")", sep=""), collapse=" + ")
-naive_form = formula(paste("wf~",   "s(ppt) + s(temp) + s(vpmin) + s(perc_cloud) + s(wind_speed) + 
+naive_form = formula(paste("wf~",   "s(ppt, bs='re') + s(vpma, bs='re') + s(perc_cloud) + s(wind_speed) + 
 s(pop_den) +
     s(pFederal) + s(pState) + s(dRoad) + s(dTrail) +
     s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y) + 
-    s(year, bs='re') + s(pPBA)", sep=""))
+    s(year, bs='re') + s(year, temp, bs='re') + s(pPBA) + s(pb1Prev) + s(pb2Prev) + s(pb3Prev)", sep=""))
 
 naive_form
 ```
 ```{r}
 # fit naive gam: fitting
-naive_gam = gam(naive_form, data=dataLong, family=binomial, stringAsFactors=T)
+naive_gam = gam(naive_form, data=dataLong, family=binomial)
 summary(naive_gam)
 ```
 
@@ -102,6 +142,44 @@ naive_gam$coefficients
 
 
 ```{r}
-plot(naive_gam, scale=0)
+plot(naive_gam, scale=0, rug=T)
 ```
+
+
+```{r}
+# mapping the variables
+plot_map = function(data, var, type="c", direction=1) {
+  if (type == "c") {
+    ggplot(data=data) +
+      geom_sf(aes(fill=!!sym(var), color=!!sym(var))) +
+      scale_fill_viridis_c(direction=direction) +
+      scale_color_viridis_c(direction=direction)
+  } else if (type == "d") {
+    ggplot(data=data) +
+      geom_sf(aes(fill=as.factor(!!sym(var)), color=as.factor(!!sym(var)))) +
+      scale_fill_viridis_d(direction=direction) +
+      scale_color_viridis_d(direction=direction)
+  }
+}
+dataPlot = read_sf("/home/michael_xiao/R/s/Final_Data/update_data2.shp")
+dataPlot = dataPlot %>% filter((tree > 0.5)|(shrub > 0.6))
+
+# make fire location
+fire_loc = dataPlot %>% filter(wf_count >= 1) %>% pull(geometry) %>% st_centroid()
+
+# test on dtrail
+ggplot() +
+  geom_sf(data=dataPlot, aes(fill=dTrail, color=dTrail)) +
+  geom_sf(data=fire_loc, size=0.3, color="red", alpha=0.2) + 
+  scale_fill_viridis_c(direction=-1) +
+  scale_color_viridis_c(direction=-1)
+
+
+ggplot(data=fire) +
+  geom_sf()
+
+```
+
+
+
 
