@@ -23,6 +23,8 @@ require(GGally)
 require(car)
 require(gstat)
 require(iml)
+require(ggthemes)
+require(mgcViz)
 
 data = read_sf("/home/michael_xiao/R/s/Final_Data/update_data2.shp")
 data = data %>% filter((tree > 0.5)|(shrub > 0.6))
@@ -63,8 +65,8 @@ for (y in 2013:2019) {
 }
 
 # shift aspect
-data$aspect = abs(180 - abs(data$aspect-225))
-
+# data$aspect = abs(180 - abs(data$aspect-225))
+# 
 data.cent = data$geometry %>% st_centroid() %>% st_coordinates()
 data$CENTROID_X = data.cent[,1]
 data$CENTROID_Y = data.cent[,2]
@@ -135,6 +137,10 @@ naive_gam$coefficients
 ```
 
 
+```{r}
+viz = getViz(naive_gam)
+plot(sm(viz, select=1))
+```
 
 
 
@@ -144,6 +150,119 @@ naive_gam$coefficients
 ```{r}
 plot(naive_gam, scale=0, rug=T)
 ```
+
+Model 1: only random intercept on year (G Model)
+```{r}
+model1_form = formula(paste("wf~",   "s(ppt) + s(vpma) + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) +
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y) + 
+    s(year, bs='re') + s(temp) + s(pPBA) + s(pb1Prev) + s(pb2Prev) + s(pb3Prev)", sep=""))
+
+model1 = gam(model1_form, data=dataLong, family=binomial)
+summary(model1)
+```
+
+
+Model 2: add anomoly detection (G Model)
+```{r}
+dataLong$dTemp = dataLong$temp - dataLong$temperature
+dataLong$dPpt = dataLong$ppt - dataLong$precip
+dataLong$dVPM = dataLong$vpma - dataLong$vpmax
+
+model2_form = formula(paste("wf~",   "s(ppt) + s(vpma) + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp) + s(dPpt) + s(dVPM)+
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y) + 
+    s(year, bs='re') + s(temp) + s(pPBA) + s(pb1Prev) + s(pb2Prev) + s(pb3Prev)", sep=""))
+
+model2 = gam(model2_form, data=dataLong, family=binomial)
+summary(model2)
+```
+
+
+Model 3: Random slope (Linear?)
+```{r}
+model3_form = formula(paste("wf~",   "s(ppt, year, bs='re') + s(vpma, year, bs='re') + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp) + s(dPpt) + s(dVPM)+
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y) + s(temp, year, bs='re') + s(pPBA) + s(pb1Prev) + s(pb2Prev) + s(pb3Prev) + s(ppt) + s(vpma) + s(temp)", sep=""))
+
+model3 = gam(model3_form, data=dataLong, family=binomial)
+summary(model3)
+```
+
+
+Model 4: Random Intercept + Slope
+```{r}
+model4_form = formula(paste("wf~",   "s(ppt, year, bs='re') + s(vpma, year, bs='re') + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp) + s(dPpt) + s(dVPM)+
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y) + s(temp, year, bs='re') + s(pPBA) + s(pb1Prev) + s(pb2Prev) + s(pb3Prev) + s(ppt) + s(vpma) + s(temp) + s(year, bs='re')", sep=""))
+
+model4 = gam(model4_form, data=dataLong, family=binomial)
+summary(model4)
+```
+
+
+Model 5: Random Smooth (GS Model)
+```{r}
+model5_form = formula(paste("wf~",   "s(ppt, year, bs='fs') + s(vpma, year, bs='fs') + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp) + s(dPpt) + s(dVPM)+
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y) + s(temp, year, bs='fs') + s(pPBA) + s(pb1Prev) + s(pb2Prev) + s(pb3Prev) + s(ppt) + s(vpma) + s(temp)", sep=""))
+
+model5 = gam(model5_form, data=dataLong, family=binomial)
+summary(model5)
+```
+
+Model 6: Additional Smoothers on Fire Stuff (GS Model)
+```{r}
+model6_form = formula(paste("wf~",   "s(ppt, year, bs='fs') + s(vpma, year, bs='fs') + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp) + s(dPpt) + s(dVPM)+
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y) + s(temp, year, bs='fs') + s(pPBA, year, bs='fs') + s(pb1Prev, year, bs='fs') + s(pb2Prev, year, bs='fs') + s(pb3Prev, year, bs='fs') + s(ppt) + s(vpma) + s(temp)", sep=""))
+
+model6 = gam(model6_form, data=dataLong, family=binomial)
+summary(model6)
+```
+
+Model 7: GI Model (different penalty terms)
+
+```{r}
+model7_form = formula(paste("wf~",   "s(ppt, by=year) + s(vpma, by=year) + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp) + s(dPpt) + s(dVPM)+
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y) + s(temp, by=year) + s(pPBA, by=year) + s(pb1Prev, by=year) + s(pb2Prev, by=year) + s(pb3Prev, by=year) + s(ppt) + s(vpma) + s(temp) + s(year, bs='re')", sep=""))
+
+model7 = gam(model7_form, data=dataLong, family=binomial, method="REML")
+summary(model7)
+```
+
+Model 8: Cyclic for aspect (GS Model)
+
+```{r}
+model8_form = formula(paste("wf~",   "s(ppt, year, bs='fs') + s(vpma, year, bs='fs') + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp) + s(dPpt) + s(dVPM)+
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect, bs='cc') + s(CENTROID_X, CENTROID_Y) + s(temp, year, bs='fs') + s(pPBA, year, bs='fs') + s(pb1Prev, year, bs='fs') + s(pb2Prev, year, bs='fs') + s(pb3Prev, year, bs='fs') + s(ppt) + s(vpma) + s(temp)", sep=""))
+
+ctrl <- gam.control(trace = TRUE)
+model8 = gam(model8_form, data=dataLong, family=binomial, knots=list(aspect=c(0,360)), control = ctrl)
+summary(model8)
+```
+
+
+
+
+
+
+
+
+Model Comparison
+
+```{r}
+AIC(model1, model2, model3, model4, model5, model6, model7, model8)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ```{r}
@@ -161,23 +280,55 @@ plot_map = function(data, var, type="c", direction=1) {
       scale_color_viridis_d(direction=direction)
   }
 }
+
+plotFireVar = function(data, var, plot_title, legend_title) {
+  ggplot() +
+  geom_sf(data=data, aes(color=!!sym(var))) +
+    scale_color_continuous(high = "#132B43", low = "#56B1F7", name=legend_title) +
+  geom_sf(data=fire_loc, size=0.4, alpha=0.15, aes(fill="val"), color="red") +
+    scale_fill_manual(values="black", labels="", guide=guide_legend(override.aes=list(size=2, alpha=1), title="Fire")) +
+  ggtitle(plot_title)+
+  theme_minimal()
+}
+
+
+
 dataPlot = read_sf("/home/michael_xiao/R/s/Final_Data/update_data2.shp")
 dataPlot = dataPlot %>% filter((tree > 0.5)|(shrub > 0.6))
 
 # make fire location
 fire_loc = dataPlot %>% filter(wf_count >= 1) %>% pull(geometry) %>% st_centroid()
+fire_loc = st_sf(fire_loc)
+fire_loc$val = 1.5
 
 # test on dtrail
 ggplot() +
-  geom_sf(data=dataPlot, aes(fill=dTrail, color=dTrail)) +
-  geom_sf(data=fire_loc, size=0.3, color="red", alpha=0.2) + 
-  scale_fill_viridis_c(direction=-1) +
-  scale_color_viridis_c(direction=-1)
+  geom_sf(data=dataPlot, aes(color=dTrail)) +
+    scale_color_continuous(high = "#132B43", low = "#56B1F7", name="Distance(km)") +
+  geom_sf(data=fire_loc, size=0.4, alpha=0.15, aes(fill="val"), color="red") +
+    scale_fill_manual(values="black", labels="", guide=guide_legend(override.aes=list(size=2, alpha=1), title="Fire")) +
+  ggtitle("Distance to Trails")+
+  theme_minimal()
 
 
-ggplot(data=fire) +
-  geom_sf()
+plotFireVar(dataPlot, "dTrail", plot_title = "Distance to Trail", legend_title = "Distance(km)")
+ggsave("~/R/s/Plots/fire_var/dTrail.png")
 
+colnames(dataPlot)
+
+vars_to_plot = c("ppt", "temp", "vpmax", "elevation", "perc_cloud", "wind_speed", "pop_den", "pFederal", "pState", "dRoad", "dTrail", "dPowerLine", "annual_pb", "slope", "aspect")
+
+plot_titles = c("Mean Annual Precipitation", "Mean Annual Temperature", "Mean Max VPD", "Elevation", "Cloud Coverage", "Wind Speed", "Population Density", "Proportion of Federally Owned Land", "Proportion of State Owned Land", "Distance to Road", "Distance to Trail", "Distance to Power Line", "Mean Annual Proportion Prescribed Burning", "Slope", "Aspect")
+
+legend_titles = c("Precipitation(mm)", "Temperature(degree Celcius)", "VPD(hPA)", "Elevation(m)", "Cloud Coverage(proportion)", "Wind Speed(m/s)", "Population Density(persons/cell)", "Proportion of Federally Owned Land", "Proportion of State Owned Land", "Distance(km)", "Distance(km)", "Distance(km)", "Mean Annual Proportion Prescribed Burning", "Slope(degree)", "Aspect(folded degree)")
+
+for (var in vars_to_plot) {
+  print(var)
+  pt = plot_titles[which(vars_to_plot == var)]
+  lt = legend_titles[which(vars_to_plot == var)]
+  plotFireVar(dataPlot, var, plot_title = pt, legend_title = lt)
+  ggsave(paste("~/R/s/Plots/fire_var/", var, ".png"))
+}
 ```
 
 
