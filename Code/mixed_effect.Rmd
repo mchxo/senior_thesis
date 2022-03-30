@@ -16,6 +16,7 @@ getwd()
 ```{r}
 # load packages and data
 require("sf")
+require(sp)
 require(tidyverse)
 require(plotly)
 require(mgcv)
@@ -248,6 +249,36 @@ model9 = gam(model9_form, data=dataLong, family=binomial)
 summary(model9)
 ```
 
+Model 10: Tensor product of year and coords
+
+```{r}
+model10_form = formula(paste("wf~",   "s(ppt, year, bs='fs') + s(vpma, year, bs='fs') + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp, year, bs='fs') + s(dPpt, year, bs='fs') + s(dVPM, year, bs='fs')+
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + te(CENTROID_X, CENTROID_Y, year, bs='fs') + s(temp, year, bs='fs') + s(pPBA, year, bs='fs') + s(pb1Prev, year, bs='fs') + s(pb2Prev, year, bs='fs') + s(pb3Prev, year, bs='fs') + s(ppt) + s(vpma) + s(temp) + s(dTemp) + s(dPpt) + s(dVPM)", sep=""))
+
+model10 = gam(model10_form, data=dataLong, family=binomial)
+summary(model10)
+```
+
+
+
+
+
+
+
+
+```{r}
+res = model9$residuals
+dataLong$res = res
+x = dataLong$CENTROID_X
+y = dataLong$CENTROID_Y
+coordinates(dataLong) = ~x+y
+v = variogram(res~1, data=dataLong)
+
+v_dir = variogram(res~1, data=dataLong, alpha=c(0,45,90,130))
+plot(v)
+plot(v_dir)
+plot_map(data %>% filter(res>0), "res", direction=-1)
+```
 
 
 
@@ -257,8 +288,18 @@ summary(model9)
 Model Comparison
 
 ```{r}
-AIC(model1, model2, model3, model4, model5, model6, model7, model8, model9)
+AIC(model1, model2, model3, model4, model5, model6, model7, model8, model9, model10)
 ```
+
+```{r}
+viz = getViz(model9)
+plot(sm(viz, select=20)) + 
+  l_fitLine()
+```
+
+
+
+
 
 ```{r}
 plot(model9,scale=0, rug=T)
@@ -346,5 +387,8 @@ for (var in vars_to_plot) {
 ```
 
 
+```{r}
+gam.check(model9)
+```
 
 
