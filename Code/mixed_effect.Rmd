@@ -26,6 +26,8 @@ require(gstat)
 require(iml)
 require(ggthemes)
 require(mgcViz)
+require(tidymv)
+require(gamm4)
 
 data = read_sf("/home/michael_xiao/R/ss/Final_Data/update_data2.shp")
 data = data %>% filter((tree > 0.5)|(shrub > 0.6))
@@ -67,10 +69,13 @@ for (y in 2013:2019) {
 
 # shift aspect
 data$aspect = abs(180 - abs(data$aspect-225))
+
 # 
-data.cent = data$geometry %>% st_centroid() %>% st_coordinates()
-data$CENTROID_X = data.cent[,1]
-data$CENTROID_Y = data.cent[,2]
+data.cent = data$geometry %>% st_centroid()
+new.proj = st_transform(data.cent, crs=4326) %>% st_coordinates()
+data$CENTROID_X = new.proj[,1]
+data$CENTROID_Y = new.proj[,2]
+data
 ```
 
 
@@ -308,6 +313,9 @@ plot_map(data %>% filter(res>0), "res", direction=-1)
 ```
 
 
+```{r}
+plot_smooths(model9, series=pPBA, exclude_random=T, comparison=year)
+```
 
 
 
@@ -320,11 +328,16 @@ AIC(model1, model2, model3, model4, model5, model6, model7, model8, model9, mode
 
 ```{r}
 viz = getViz(model9)
-plot(sm(viz, select=20)) + 
+plot(sm(viz, select=20), rug=T) + 
   l_fitLine()
+
+#plot(model9, select=11, scale=0, rug=T)
 ```
 
 
+```{r}
+gam.check(model9)
+```
 
 
 
@@ -421,5 +434,72 @@ for (var in vars_to_plot) {
 ```{r}
 gam.check(model9)
 ```
+
+```{r}
+# increase k
+model7_form = formula(paste("wf~",   "s(ppt, by=year) + s(vpma, by=year) + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp, by=year) + s(dPpt, by=year) + s(dVPM, by=year)+
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y, by=year) + s(temp, by=year) + s(pPBA, by=year) + s(pb1Prev, by=year) + s(pb2Prev, by=year) + s(pb3Prev, by=year) + s(ppt) + s(vpma) + s(temp) + s(dTemp) + s(dPpt) + s(dVPM) + s(year, bs='re')", sep=""))
+
+model7 = bam(model7_form, data=dataLong, family=binomial())
+saveRDS(model7, file = "/home/michael_xiao/R/ss/models/model7.rds")
+
+summary(model7)
+
+plot(model7,scale=0)
+```
+
+
+
+```{r}
+plot(model92, scale=0, rug=T)
+```
+
+```{r}
+summary(model9)
+```
+
+```{r}
+# continuous model
+form_cont = formula(paste("pWFA~",   "s(ppt, year, bs='fs') + s(vpma, year, bs='fs') + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp, year, bs='fs') + s(dPpt, year, bs='fs') + s(dVPM, year, bs='fs') +
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y, year, bs='fs') + s(temp, year, bs='fs') + s(pPBA, year, bs='fs') + s(pb1Prev, year, bs='fs') + s(pb2Prev, year, bs='fs') + s(pb3Prev, year, bs='fs') + s(ppt) + s(vpma) + s(temp) + s(dTemp) + s(dPpt) + s(dVPM)", sep=""))
+
+model_cont = bam(form_cont, data=dataLong)
+summary(model_cont)
+saveRDS(model_cont, file = "/home/michael_xiao/R/ss/models/model_cont.rds")
+```
+
+```{r}
+gam.check(model_cont)
+```
+
+
+```{r}
+dataLong
+```
+
+```{r}
+data9 = plot(model9, select=20)
+```
+
+```{r}
+data9
+```
+
+```{r}
+k.check(model9)
+```
+
+```{r}
+gamm_form = formula(paste("wf~",   "s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail)  +
+    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y) + s(pPBA) + s(pb1Prev) + s(pb2Prev) + s(pb3Prev, year) + s(ppt) + s(vpma) + s(temp) + s(dTemp) + s(dPpt) + s(dVPM)", sep=""))
+dataLong$year = as.numeric(dataLong$year) +2012
+
+model_gamm = gamm4(gamm_form, data=dataLong, family=binomial(), random=~(1|year))
+saveRDS(model_gamm, file = "/home/michael_xiao/R/ss/models/model_gamm.rds")
+
+dataLong
+```
+
+
 
 

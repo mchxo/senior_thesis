@@ -1,0 +1,83 @@
+---
+title: "Update 4/19"
+output:
+  pdf_document: default
+  html_document: default
+date: '2022-04-19'
+---
+
+```{r include=FALSE}
+require("sf")
+require(sp)
+require(tidyverse)
+require(plotly)
+require(mgcv)
+require(GGally)
+require(car)
+require(gstat)
+require(iml)
+require(ggthemes)
+require(mgcViz)
+require(tidymv)
+
+binary_model = readRDS("/home/michael_xiao/R/ss/models/model9.rds")
+cont_model = readRDS("/home/michael_xiao/R/ss/models/model_cont.rds")
+
+# viz_binary = getViz(binary_model)
+# saveRDS(viz_binary, file="/home/michael_xiao/R/ss/models/viz_binary.rds")
+# viz_cont = getViz(cont_model)
+# saveRDS(viz_cont, file="/home/michael_xiao/R/ss/models/viz_cont.rds")
+
+
+viz_binary = readRDS(file="/home/michael_xiao/R/ss/models/viz_binary.rds")
+viz_cont = readRDS(file="/home/michael_xiao/R/ss/models/viz_cont.rds")
+```
+
+## Absense-Presence Model
+
+For my binary model, after model selections, the best-performing model is one that fits a random smooth of time-dependent variables (e.g. temperature, precipitation) for each year, but lets the random smooths have a shared panelty term (same wiggliness). This is achieved using the `bs = "fs"` option.
+
+```{r, echo=FALSE}
+# sum_bin = summary(binary_model)
+# saveRDS(sum_bin, file="/home/michael_xiao/R/ss/models/sum_bin.rds")
+readRDS(file="/home/michael_xiao/R/ss/models/sum_bin.rds")
+```
+
+This model has a deviance explained of over 40%, which is doulbe the value from the model we discussed last time. Some notes on the variable names: `dTemp`, `dPpt`, and `dVPM` refer to the deviation of, say, temperature of a particular year, from the average temperature of that grid cell across all years. `pbiPrev` is the percent prescribe burned from `i` years prior. By the way, I tried transforming aspect using the folded aspect structure you showed me, but the result is quite similar with no significance. I also tried using a cyclic basis on the untransformed aspect, and the result was still no significance.
+
+The main concern is how to intepret the model output. The most important variable, the proportion of a gridcell burned, looks like this:
+
+```{r, echo=FALSE}
+plot(sm(viz_binary, select=20)) + l_fitLine()
+```
+
+
+
+The smooths seem to form mirror images of each other. I think this could still be interesting because the ones that showed a decrease in ignition probability are the ones that come from the most recent years. I think we could say something along the lines of: for most recent years, you need to burn a suffcient amount of the area in order to effectively prevent a wildfire. But I'm not sure how to intepret the results from less recent years.
+
+
+## Continuous Model
+
+Using the same model, I fitted the percentage of a grid cell burned by wildfires instead of just the absence-presence of a wildfire. The result is more chaotic.
+
+```{r, echo=FALSE}
+# sum_cont = summary(model_cont)
+# saveRDS(sum_cont, file="/home/michael_xiao/R/ss/models/sum_cont.rds")
+
+readRDS(file="/home/michael_xiao/R/ss/models/sum_cont.rds")
+
+```
+
+This model has a really low deviance explained, which prompts me to think that there are some covariates that are missing from the data. I think I can spin this into a suggesting for future studies. But, again, the issue lies in the interpretability of the model. For percent prescribed burned, the smooths look like this:
+
+```{r, echo=FALSE}
+plot(sm(viz_cont, select=20)) + l_fitLine()
+```
+
+For 2018, the effect is much larger than other years. And overall, the effect is quite inconsistent across years.
+
+
+
+
+
+
