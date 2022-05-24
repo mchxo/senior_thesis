@@ -1,0 +1,81 @@
+```{r}
+require(sf)
+require(raster)
+require(rgdal)
+```
+
+```{r}
+# extract ppt values from 2015
+result = c()
+years = c()
+for (y in 201501:201512) {
+  ppt = raster(paste("~/R/ss/Final_Data/weather/PRISM_ppt_stable_4kmM3_", y, "_bil.bil", sep=""))
+  values = extract(ppt, ca)[[1]]
+  result = c(result, values)
+  years = c(years, rep(y, length(values)))
+}
+
+ppt2015 = data.frame(ppt=result, year=years)
+
+result = c()
+years = c()
+for (y in 201801:201812) {
+  ppt = raster(paste("~/R/ss/Final_Data/weather/PRISM_ppt_stable_4kmM3_", y, "_bil.bil", sep=""))
+  values = extract(ppt, ca)[[1]]
+  result = c(result, values)
+  years = c(years, rep(y, length(values)))
+}
+
+ppt2018 = data.frame(ppt=result, year=years)
+
+p2015 = ppt2015 %>% group_by(year) %>% summarize(mean= mean(ppt, na.rm=T))
+p2018 = ppt2018 %>% group_by(year) %>% summarize(mean= mean(ppt, na.rm=T))
+
+p2015$month = 1:12
+p2015$year = "2015"
+p2018$month = 1:12
+p2018$year = "2018"
+
+ppt_agg = bind_rows(p2015, p2018)
+ppt_agg
+```
+
+```{r}
+# extract ppt values from 2018
+result = c()
+years = c()
+for (y in 201801:201812) {
+  ppt = raster(paste("~/R/ss/Final_Data/weather/PRISM_ppt_stable_4kmM3_", y, "_bil.bil", sep=""))
+  values = extract(ppt, ca)[[1]]
+  result = c(result, values)
+  years = c(years, rep(y, length(values)))
+}
+
+ppt2018 = data.frame(ppt=result, year=years)
+ppt2018
+mean?
+```
+
+
+
+
+```{r}
+ppt_2015 <- raster("~/R/ss/Final_Data/weather/PRISM_ppt_stable_4kmM3_201508_bil.bil")
+ca = readOGR("~/R/ss/Final_Data/weather/CA_State_TIGER2016.shp")
+ca = spTransform(ca, crs(ppt_2015))
+
+ppt_2015
+
+p2015 = crop(p2015, extent(ca))
+p2015 = mask(p2015, ca)
+
+plot(p2015)
+plot(ca, col="red", add=T)
+
+
+
+hist(extract(ppt_2015, ca)[[1]])
+
+```
+
+

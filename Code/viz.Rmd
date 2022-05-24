@@ -1,0 +1,181 @@
+Use in combination with other files
+
+```{r}
+require(gridExtra)
+require(cowplot)
+```
+
+
+```{r fig.height = 3.5, fig.width = 4}
+
+p1 = plot(sm(viz_binary, select=17)) + 
+  l_fitLine() +
+  xlab("% PB burned") +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") 
+
+p1 = p1$ggObj
+
+p2 = ggplot(data=ppba_count) +
+  geom_col(aes(x=factor(year), y=count), fill="blue", alpha=0.7) +
+  #ggtitle("Number of Large Scale (>25%) Wildfires by Year") + 
+  scale_y_continuous(n.breaks=7) +
+  xlab("year") +
+  theme_minimal(base_size = 10, base_family="Times New Roman")
+
+plot_grid(p1, p2, labels=c("(a)", "(b)"), label_size=10, label_fontfamily = "Times New Roman", rel_widths = c(2.5,1))
+
+p3 = plot(sm(viz_binary, select=5)) + 
+  l_fitLine() +
+  l_ciLine() +
+  xlab("percentage") +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") 
+p3 = p3$ggObj
+
+p4 = plot(sm(viz_binary, select=11)) + 
+  l_fitLine() +
+  l_ciLine() +
+  xlab("distance (km)") +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") 
+p4 = p4$ggObj
+
+p5 = plot(sm(viz_binary, select=1)) + 
+  l_fitLine() +
+  xlab("precipitation (mm)") +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+p5 = p5$ggObj
+
+p6 = plot(sm(viz_binary, select=16)) + 
+  l_fitLine() +
+  xlab("temperature (degree Celcius)") +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+p6 = p6$ggObj
+
+pg1 = plot_grid(p1, p2, labels=c("(a)", "(b)"), label_size=10, label_fontfamily = "Times New Roman", rel_widths = c(2.5,1))
+
+pg2 = plot_grid(p3, p4, labels=c("(c)", "(d)"), label_size=10, label_fontfamily = "Times New Roman")
+
+pg3 = plot_grid(p5, p6, labels=c("(e)", "(f)"), label_size=10, label_fontfamily = "Times New Roman")
+
+
+plot_grid(pg1, pg2, pg3, nrow=3)
+```
+
+s(ppt,year)                   7.9531     69 13.522 0.011043 *  
+s(vpma,year)                  1.9088     69  1.912 0.293520    
+s(perc_cloud)                 0.1752      9  0.069 0.500663    
+s(wind_speed)                 0.6677      9  1.084 0.166085    
+s(pop_den)                    0.1396      9  0.045 0.635494    
+s(pFederal)                   1.0204      9  6.937 0.002763 ** 
+s(pState)                     0.1722      9  0.009 0.958235    
+s(dTrail)                     0.6309      9  0.941 0.201932    
+s(dTemp,year)                 1.0866     69  0.599 0.805520    
+s(dPpt,year)                  4.8389     69 12.306 0.000266 ***
+s(dVPM,year)                  1.4847     69  1.332 0.334083    
+s(dPowerLine)                 0.2738      9  0.189 0.452285    
+s(tree)                       0.5198      9  0.478 0.283793    
+s(herb)                       1.6659      9  8.919 0.002528 ** 
+s(elevation)                  0.9447      9  1.692 0.104159    
+s(slope)                      1.3550      9  8.323 0.001463 ** 
+s(CENTROID_X,CENTROID_Y,year) 3.1724    209  2.671 0.524410    
+s(temp,year)                  1.4490     69  0.924 0.728585    
+s(pPBA,year)                  0.5667     66  0.199 0.964970    
+s(pb1Prev,year)               0.5037     67  0.139 0.984795    
+s(pb2Prev,year)               0.5304     67  0.128 0.994171    
+s(pb3Prev,year)               0.5267     67  0.055 0.999991  
+
+
+```{r}
+p1 = plot(sm(viz_cont, select=19)) + 
+  l_fitLine() +
+  xlab("% PB burned") +
+  ylab("fitted value") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+p1 = p1$ggObj
+
+p2 = plot(sm(viz_cont, select=20)) + 
+  l_fitLine() +
+  xlab("% PB burned in previous year") +
+  ylab("fitted value") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") 
+p2 = p2$ggObj
+
+plot(sm(viz_cont, select=6)) + 
+  l_fitLine() +
+  l_ciLine() +
+  #xlab("% PB burned") +
+  ylab("fitted value") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") 
+
+p3 = plot(sm(viz_cont, select=16)) + 
+  l_fitLine() +
+  l_ciLine() +
+  xlab("percentage") +
+  ylab("fitted value") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") 
+p3 = p3$ggObj
+
+p4 = plot(sm(viz_cont, select=1)) + 
+  l_fitLine() +
+  xlab("precipitation (mm)") +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+p4 = p4$ggObj
+
+p5 = plot(sm(viz_cont, select=10)) + 
+  l_fitLine() +
+  xlab("precipitation deviation (mm)") +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+p5 = p5$ggObj
+
+ggplot() +
+  geom_line(data=p2015, aes(x=year, y=mean_2015), color="2015") +
+  geom_point(data=p2015, aes(x=year, y=mean_2015), color="2015")
+
+
+
+
+plot_grid(p1, p2, labels=c("(a)", "(b)"), label_size=10, label_fontfamily = "Times New Roman", rel_widths = c(0.75,1))
+plot_grid(p3, p4, labels=c("(c)", "(d)"), label_size=10, label_fontfamily = "Times New Roman")
+
+
+```
+
+
+
+
+
+
+

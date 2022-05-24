@@ -1,0 +1,290 @@
+---
+title: "appendix"
+output: html_document
+date: '2022-05-07'
+---
+
+
+```{r}
+summary(model91)
+```
+
+1s(ppt,year)                    45.090     69  294.178  < 2e-16 ***
+2s(vpma,year)                   39.153     69  189.674  < 2e-16 ***
+3s(perc_cloud)                   7.555      9   53.720  < 2e-16 ***
+4s(wind_speed)                   3.411      9   11.064 0.008069 ** 
+5s(pFederal)                     5.625      9   77.413  < 2e-16 ***
+6s(pState)                       1.649      9   19.540 4.82e-06 ***
+7s(dTrail)                       5.255      9   25.204 4.60e-05 ***
+8s(dTemp,year)                  53.213     69  134.457  < 2e-16 ***
+9s(dPpt,year)                   46.023     64  329.540  < 2e-16 ***
+10s(dVPM,year)                   49.558     68  122.717  < 2e-16 ***
+11s(dPowerLine)                   1.894      9   23.161 3.09e-06 ***
+12s(herb)                         5.719      9  333.307  < 2e-16 ***
+13s(elevation)                    6.697      9   31.602 7.21e-06 ***
+14s(slope)                        7.273      9   36.948  < 2e-16 ***
+15s(CENTROID_X,CENTROID_Y,year) 208.266    209 1801.085  < 2e-16 ***
+16s(temp,year)                   52.366     69  221.632  < 2e-16 ***
+17s(pPBA,year)                    6.855     66   35.507  < 2e-16 ***
+18s(pb1Prev,year)                 3.275     65    4.317 0.202193    
+19s(pb2Prev,year)                 6.607     64   13.513 0.038353 *  
+20s(pb3Prev,year)                 6.749     65   21.385 0.000431 ***
+```{r}
+variables = c("precipitation (mm)", "max vpd", "cloud corerage", "wind speed (m/s)", "percentage federal ownership",
+              "percentage state ownership", "distance to hiking trail (km)", 
+              "deviation from average temperature (degree Celcius)", "deviation from average precipitation (mm)", 
+              "deviation from average max vpd", "distance to energy transmission line (km)", 
+              "percentage herb coverage", "elevation (m)", "slope (degree)","no", "temperature (degree Celcius)", 
+              "percentage prescribed burned", "percentage prescribed burned (1 year prior)",
+              "percentage prescribed burned (2 years prior)", "percentage prescribed burned (3 years prior)"
+              )
+orders = c(1, 9, 16, 8, 2,
+           10, 3, 4, 12, 13,
+           14, 5, 6, 7, 11,
+           17:20)
+
+
+
+
+plots = list()
+counter = 0
+for (i in orders[1:5]) {
+  counter = counter + 1
+  p = plot(sm(viz_binary, select=i)) + 
+  l_fitLine() +
+  xlab(variables[i]) +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+  
+  
+  plots[[counter]] = p$ggObj
+}
+
+
+pg1 = plot_grid(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5]], nrow=1,
+                labels = paste("(", letters[1:5], ")", sep=""), label_size=10, label_fontfamily = "Times New Roman", hjust=0)
+
+plots = list()
+counter = 0
+for (i in orders[6:10]) {
+  counter = counter + 1
+  p = plot(sm(viz_binary, select=i)) + 
+  l_fitLine() +
+  xlab(variables[i]) +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+  
+  
+  plots[[counter]] = p$ggObj
+}
+
+pg2 = plot_grid(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5]], nrow=1,
+                labels = paste("(", letters[6:10], ")", sep=""), label_size=10, label_fontfamily = "Times New Roman", hjust=0)
+
+plots = list()
+counter = 0
+for (i in orders[11:15]) {
+  counter = counter + 1
+  p = plot(sm(viz_binary, select=i)) + 
+  l_fitLine() +
+  xlab(variables[i]) +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+  
+  
+  plots[[counter]] = p$ggObj
+}
+
+pg3 = plot_grid(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5]], nrow=1,
+                labels = paste("(", letters[11:15], ")", sep=""), label_size=10, label_fontfamily = "Times New Roman", hjust=0)
+
+plots = list()
+counter = 0
+for (i in orders[16:18]) {
+  print(i)
+  print(variables[i])
+  counter = counter + 1
+  p = plot(sm(viz_binary, select=i)) + 
+  l_fitLine() +
+  xlab(variables[i]) +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+  
+  
+  plots[[counter]] = p$ggObj
+}
+
+p1 = plot(sm(viz_binary, select=20)) + 
+  l_fitLine() +
+  xlab(variables[20]) +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") 
+
+p1 = p1$ggObj
+plots[[4]] = p1
+
+pg4 = plot_grid(plots[[1]], plots[[2]], plots[[3]], plots[[4]], NULL, nrow=1,
+                labels = paste("(", letters[16:19], ")", sep=""), label_size=10, label_fontfamily = "Times New Roman", hjust=0, rel_widths = c(1, 1, 1, 1.5, 1))
+
+plot_grid(pg1, pg2, pg3, pg4, nrow=4, align="hv")
+ggsave("~/R/ss/Plots/appendix1.png", width = 20, height = 15, units = "in")
+
+
+```
+
+```{r}
+summary(model_cont)
+```
+
+1s(ppt,year)                   10.0625     69 18.588 0.002785 ** 
+2s(vpma,year)                   2.1917     69  2.195 0.264188    
+3s(perc_cloud)                  0.1943      9  0.083 0.481256    
+4s(pop_den)                     0.2197      9  0.098 0.566453    
+5s(pFederal)                    0.9955      9  6.173 0.004712 ** 
+6s(pState)                      0.1652      9  0.005 0.981389    
+7s(dTemp,year)                  0.7697     69  0.300 0.975712    
+8s(dPpt,year)                   4.6333     69 11.058 0.000457 ***
+9s(dVPM,year)                   1.5104     69  1.230 0.403647    
+10s(herb)                        1.6921      9  9.483 0.002097 ** 
+11s(elevation)                   0.9453      9  1.948 0.082083 .  
+12s(slope)                       1.4389      9 10.180 0.000905 ***
+13s(CENTROID_X,CENTROID_Y,year)  3.2651    209  2.802 0.447507    
+14s(temp,year)                   1.5792     69  1.014 0.695585    
+15s(pPBA,year)                   0.5074     66  0.154 0.984202    
+16s(pb1Prev,year)                0.4477     67  0.091 0.997632    
+17s(pb2Prev,year)                0.4691     67  0.081 0.999477    
+18s(pb3Prev,year)                0.4479     67  0.083 0.999362   
+
+
+
+```{r}
+viz_cont = getViz(model_cont)
+```
+
+              )
+```{r}
+variables = c("precipitation (mm)", "max vpd", "cloud corerage", "population density", "percentage federal ownership",
+              "percentage state ownership", "deviation from average temperature (degree Celcius)", 
+              "deviation from average precipitation (mm)", "deviation from average max vpd",
+              "percentage herb coverage", "elevation (m)", "slope (degree)","no",
+              "temperature (degree Celcius)", 
+              "percentage prescribed burned", "percentage prescribed burned (1 year prior)",
+              "percentage prescribed burned (2 years prior)", "percentage prescribed burned (3 years prior)")
+
+orders = c(1, 8, 14, 7, 2,
+          9, 3, 10, 11, 12,
+          4, 5, 6, 15, 16,
+          17, 18)
+
+plots = list()
+counter = 0
+for (i in orders[1:5]) {
+  counter = counter + 1
+  p = plot(sm(viz_cont, select=i)) + 
+  l_fitLine() +
+  xlab(variables[i]) +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+  
+  
+  plots[[counter]] = p$ggObj
+}
+
+
+pg1 = plot_grid(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5]], nrow=1,
+                labels = paste("(", letters[1:5], ")", sep=""), label_size=10, label_fontfamily = "Times New Roman", hjust=0)
+
+plots = list()
+counter = 0
+for (i in orders[6:10]) {
+  print(i)
+  counter = counter + 1
+  p = plot(sm(viz_cont, select=i)) + 
+  l_fitLine() +
+  xlab(variables[i]) +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+  
+  
+  plots[[counter]] = p$ggObj
+}
+
+pg2 = plot_grid(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5]], nrow=1,
+                labels = paste("(", letters[6:10], ")", sep=""), label_size=10, label_fontfamily = "Times New Roman", hjust=0)
+
+plots = list()
+counter = 0
+for (i in orders[11:15]) {
+  counter = counter + 1
+  p = plot(sm(viz_cont, select=i)) + 
+  l_fitLine() +
+  xlab(variables[i]) +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+  
+  
+  plots[[counter]] = p$ggObj
+}
+
+pg3 = plot_grid(plots[[1]], plots[[2]], plots[[3]], plots[[4]], plots[[5]], nrow=1,
+                labels = paste("(", letters[11:15], ")", sep=""), label_size=10, label_fontfamily = "Times New Roman", hjust=0)
+
+plots = list()
+counter = 0
+for (i in orders[16]) {
+  counter = counter + 1
+  p = plot(sm(viz_cont, select=i)) + 
+  l_fitLine() +
+  xlab(variables[i]) +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") +
+  theme(legend.position="none")
+  
+  
+  plots[[counter]] = p$ggObj
+}
+
+p1 = plot(sm(viz_cont, select=18)) + 
+  l_fitLine() +
+  xlab(variables[18]) +
+  ylab("log-odds") +
+  labs(color="year") +
+  #ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal(base_size = 10, base_family="Times New Roman") 
+
+p1 = p1$ggObj
+plots[[2]] = p1
+
+pg4 = plot_grid(plots[[1]], plots[[2]],NULL, NULL, NULL, nrow=1,
+                labels = paste("(", letters[16:17], ")", sep=""), label_size=10, label_fontfamily = "Times New Roman", hjust=0, rel_widths = c(1, 1.5, 1, 1, 1))
+
+plot_grid(pg1, pg2, pg3, pg4, nrow=4, align="hv")
+ggsave("~/R/ss/Plots/appendix2.png", width = 20, height = 15, units = "in")
+```
+
+

@@ -15,9 +15,10 @@ getwd()
 
 ```{r}
 # load packages and data
-require("sf")
+require(sf)
 require(sp)
 require(tidyverse)
+require(ggplot2)
 require(plotly)
 require(mgcv)
 require(GGally)
@@ -28,10 +29,14 @@ require(ggthemes)
 require(mgcViz)
 require(tidymv)
 require(gamm4)
+require(ggforce)
+require(gratia)
+
 
 data = read_sf("/home/michael_xiao/R/ss/Final_Data/update_data2.shp")
 data = data %>% filter((tree > 0.5)|(shrub > 0.6))
-data = data %>% rename(y2010.pPBA=pPBA10, y2011.pPBA=pPBA11, y2012.pPBA=pPBA12, y2013.pPBA=pPBA13, 
+
+data = dplyr::rename(data, y2010.pPBA=pPBA10, y2011.pPBA=pPBA11, y2012.pPBA=pPBA12, y2013.pPBA=pPBA13, 
                        y2014.pPBA=pPBA14, y2015.pPBA=pPBA15, y2016.pPBA=pPBA16, y2017.pPBA=pPBA17, 
                        y2018.pPBA=pPBA18, y2019.pPBA=pPBA19,
                        y2010.wf = wf2010, y2011.wf = wf2011, y2012.wf = wf2012, y2013.wf = wf2013, 
@@ -47,6 +52,7 @@ data = data %>% rename(y2010.pPBA=pPBA10, y2011.pPBA=pPBA11, y2012.pPBA=pPBA12, 
                        y2014.temp = Avg_y2014_, y2015.temp = Avg_y2015_, y2016.temp = Avg_y2016_, y2017.temp = Avg_y2017_, 
                        y2018.temp = Avg_y2018_, y2019.temp = Avg_y2019_, 
                        precip = ppt, temperature = temp)
+data
 ```
 
 ```{r}
@@ -247,15 +253,15 @@ summary(model8)
 
 Model 9: GS Model with deviance factored
 ```{r}
-model9_form = formula(paste("wf~",   "s(ppt, year, bs='fs') + s(vpma, year, bs='fs') + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp, year, bs='fs') + s(dPpt, year, bs='fs') + s(dVPM, year, bs='fs')+
-    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y, year, bs='fs') + s(temp, year, bs='fs') + s(pPBA, year, bs='fs') + s(pb1Prev, year, bs='fs') + s(pb2Prev, year, bs='fs') + s(pb3Prev, year, bs='fs') + s(ppt) + s(vpma) + s(temp) + s(dTemp) + s(dPpt) + s(dVPM)", sep=""))
+model9_form = formula(paste("wf~",   "s(ppt, year, bs='fs') + s(vpma, year, bs='fs') + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp, year, bs='fs') + s(dPpt, year, bs='fs') + s(dVPM, year, bs='fs') +
+    s(dPowerLine) +  s(tree) + s(herb)+ s(elevation) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y, year, bs='fs') + s(temp, year, bs='fs') + s(pPBA, year, bs='fs') + s(pb1Prev, year, bs='fs') + s(pb2Prev, year, bs='fs') + s(pb3Prev, year, bs='fs') + s(ppt) + s(vpma) + s(temp) + s(dTemp) + s(dPpt) + s(dVPM)", sep=""))
 
-model9 = bam(model9_form, data=dataLong, family=binomial())
-saveRDS(model9, file = "/home/michael_xiao/R/ss/models/model9.rds")
+model9 = gam(model9_form, data=dataLong, family=binomial)
+
 
 summary(model9)
 
-model9$outer.info
+
 ```
 
 Model 10: Tensor product of year and coords
@@ -323,7 +329,7 @@ plot_smooths(model9, series=pPBA, exclude_random=T, comparison=year)
 Model Comparison
 
 ```{r}
-AIC(model1, model2, model3, model4, model5, model6, model7, model8, model9, model10)
+AIC(model1, model2, model3, model4, model5, model6, model7, model9, model10, model91)
 ```
 
 ```{r}
@@ -392,7 +398,7 @@ plotFireVar = function(data, var, plot_title, legend_title) {
 
 
 
-dataPlot = read_sf("/home/michael_xiao/R/s/Final_Data/update_data2.shp")
+dataPlot = read_sf("/home/michael_xiao/R/ss/Final_Data/update_data2.shp")
 dataPlot = dataPlot %>% filter((tree > 0.5)|(shrub > 0.6))
 
 # make fire location
@@ -438,7 +444,7 @@ gam.check(model9)
 ```{r}
 # increase k
 model7_form = formula(paste("wf~",   "s(ppt, by=year) + s(vpma, by=year) + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp, by=year) + s(dPpt, by=year) + s(dVPM, by=year)+
-    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y, by=year) + s(temp, by=year) + s(pPBA, by=year) + s(pb1Prev, by=year) + s(pb2Prev, by=year) + s(pb3Prev, by=year) + s(ppt) + s(vpma) + s(temp) + s(dTemp) + s(dPpt) + s(dVPM) + s(year, bs='re')", sep=""))
+    s(dPowerLine) +  s(tree) + s(herb) + s(elevation) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y, by=year) + s(temp, by=year) + s(pPBA, by=year) + s(pb1Prev, by=year) + s(pb2Prev, by=year) + s(pb3Prev, by=year) + s(ppt) + s(vpma) + s(temp) + s(dTemp) + s(dPpt) + s(dVPM) + s(year, bs='re')", sep=""))
 
 model7 = bam(model7_form, data=dataLong, family=binomial())
 saveRDS(model7, file = "/home/michael_xiao/R/ss/models/model7.rds")
@@ -460,16 +466,25 @@ summary(model9)
 
 ```{r}
 # continuous model
-form_cont = formula(paste("pWFA~",   "s(ppt, year, bs='fs') + s(vpma, year, bs='fs') + s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail) + s(dTemp, year, bs='fs') + s(dPpt, year, bs='fs') + s(dVPM, year, bs='fs') +
-    s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y, year, bs='fs') + s(temp, year, bs='fs') + s(pPBA, year, bs='fs') + s(pb1Prev, year, bs='fs') + s(pb2Prev, year, bs='fs') + s(pb3Prev, year, bs='fs') + s(ppt) + s(vpma) + s(temp) + s(dTemp) + s(dPpt) + s(dVPM)", sep=""))
+# wind speed, dTrail, dPowerLine, tree, 
+form_cont = formula(paste("pWFA~",   "s(ppt, year, bs='fs') + s(vpma, year, bs='fs') + s(perc_cloud) + s(pop_den) + s(pFederal) + s(pState) + s(dTemp, year, bs='fs') + s(dPpt, year, bs='fs') + s(dVPM, year, bs='fs') + s(herb) + s(elevation) + s(slope) + s(elevation) + s(CENTROID_X, CENTROID_Y, year, bs='fs') + s(temp, year, bs='fs') + s(pPBA, year, bs='fs') + s(pb1Prev, year, bs='fs')  + s(pb2Prev, year, bs='fs')  + s(pb3Prev, year, bs='fs')", sep=""))
 
-model_cont = bam(form_cont, data=dataLong)
-summary(model_cont)
+model_cont = gam(form_cont, data=dataLong, select=T, family=betar())
 saveRDS(model_cont, file = "/home/michael_xiao/R/ss/models/model_cont.rds")
+
+summary(model_cont)
 ```
 
 ```{r}
-gam.check(model_cont)
+cont = plot(model_cont, scale=0, select=17)
+
+percent_diff = diff(cont[[6]]$fit) *100 / cont[[6]]$fit[1:(length(cont[[6]]$fit)-1)]
+
+mean(percent_diff/ diff(cont[[6]]$x))
+
+plot(model_cont, scale=0)
+
+plot_smooth(model91, view="pPBA", plot_all = "year", rm.ranef = F, shade=F, se=0)
 ```
 
 
@@ -478,7 +493,7 @@ dataLong
 ```
 
 ```{r}
-data9 = plot(model9, select=20)
+data9 = plot(model9, select=20, se=T, scale=0)
 ```
 
 ```{r}
@@ -492,13 +507,400 @@ k.check(model9)
 ```{r}
 gamm_form = formula(paste("wf~",   "s(perc_cloud) + s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dRoad) + s(dTrail)  +
     s(dPowerLine) +  s(tree) + s(herb) + s(slope) + s(aspect) + s(CENTROID_X, CENTROID_Y) + s(pPBA) + s(pb1Prev) + s(pb2Prev) + s(pb3Prev, year) + s(ppt) + s(vpma) + s(temp) + s(dTemp) + s(dPpt) + s(dVPM)", sep=""))
-dataLong$year = as.numeric(dataLong$year) +2012
+#dataLong$year = as.numeric(dataLong$year) +2012
 
 model_gamm = gamm4(gamm_form, data=dataLong, family=binomial(), random=~(1|year))
 saveRDS(model_gamm, file = "/home/michael_xiao/R/ss/models/model_gamm.rds")
 
 dataLong
 ```
+
+```{r}
+dataPlot = read_sf("/home/michael_xiao/R/ss/Final_Data/update_data2.shp")
+dataPlot = dataPlot %>% filter((tree > 0.5)|(shrub > 0.6))
+ggplot() +
+  geom_sf(data=dataPlot, fill="#ead47f", color="black", lwd=0.05) +
+  ggtitle("Grids for Analysis")+
+  theme_minimal()
+
+nrow(dataPlot)
+```
+
+
+
+
+
+
+
+```{r}
+ggplot() +
+  geom_sf(data=dataPlot, aes(color=dTrail)) +
+    scale_color_continuous(high = "#132B43", low = "#56B1F7", name="Distance(km)") +
+  geom_sf(data=fire_loc, size=0.4, alpha=0.15, aes(fill="val"), color="red") +
+    scale_fill_manual(values="black", labels="", guide=guide_legend(override.aes=list(size=2, alpha=1), title="Fire")) +
+  ggtitle("Distance to Trails")+
+  theme_minimal()
+
+plot_map = function(data, var, type="c", direction=1, title="", legend_title) {
+  if (type == "c") {
+    ggplot(data=data) +
+      geom_sf(aes(fill=!!sym(var), color=!!sym(var))) +
+      scale_fill_viridis_c(direction=direction, name=legend_title) +
+      scale_color_viridis_c(direction=direction, guide="none") +
+      # scale_color_gradient(low="grey", high="red") +
+      # scale_fill_gradient(low="grey", high="red") +
+      ggtitle(title) +
+      theme_minimal()
+  } else if (type == "d") {
+    ggplot(data=data) +
+      geom_sf(aes(fill=as.factor(!!sym(var)), color=as.factor(!!sym(var)))) +
+      scale_fill_manual(labels=c("No", "Yes"), values=c("gray", "red"), name=legend_title) +
+      scale_color_manual(labels=c("No", "Yes"), values=c("gray", "red"), guide="none") + 
+      ggtitle(title) +
+      theme_minimal()
+  }
+}
+```
+
+
+```{r}
+plot_map(dataPlot, "pPBA19",direction=-1, type="c", title="% Prescribe Burned (2019)", legend_title="percentage")
+
+ggplot(data=dataPlot, aes(x=pPBA19^(1/3), fill=factor(pPBA19^(1/3)))) +
+  geom_histogram(show.legend = F, binwidth = 0.001) +
+  scale_fill_viridis_d() + 
+  ggtitle("Distribution of Temperature") +
+  xlab("temperature") +
+  theme_minimal()
+
+hist(dataPlot$temp)
+
+colnames(dataPlot)
+
+
+ggplot(data=dataPlot, aes(x=pPBA13, fill=factor(pPBA13))) +
+  geom_histogram(show.legend = F) +
+  facet_zoom(x=pPBA13>0, ylim=c(0,20)) +
+  scale_fill_viridis_d(direction=-1) + 
+  ggtitle("Distribution of % PB (2013)") +
+  xlab("percentage")
+
+dataPlot
+
+ggplot(data=dataPlot, aes(x=Avg_y2018_)) +
+  geom_histogram() 
+
+ppba = dataPlot[paste("pPBA", 13:19, sep="")] %>% st_drop_geometry()
+ppba_count = apply(ppba, MARGIN=2, FUN=function(x){return (sum(x>0.2))})
+
+ppba_count = data_frame(year=2013:2019, count=ppba_count)
+ppba_count
+
+ggplot(data=ppba_count) +
+  geom_col(aes(x=factor(year), y=count), fill="blue", alpha=0.7) +
+  ggtitle("Number of Large Scale (>25%) Wildfires by Year") + 
+  scale_y_continuous(n.breaks=7) +
+  xlab("year") +
+  theme_minimal()
+
+dataPlot
+```
+
+```{r}
+ggplot(data=dataPlot, aes(x=Avg_y2017_, fill=factor(Avg_y2017_))) +
+  geom_histogram(show.legend = F) +
+  facet_zoom(x=pPBA13>0, ylim=c(0,20)) +
+  scale_fill_viridis_d(direction=-1) + 
+  ggtitle("Distribution of % PB (2013)") +
+  xlab("percentage")
+
+dataPlot
+```
+
+
+
+
+
+```{r}
+model91_form = formula(paste("wf~",   "s(ppt, year, bs='fs') + s(vpma, year, bs='fs') + s(perc_cloud) + s(wind_speed) + s(pFederal) + s(pState) + s(dTrail) + s(dTemp, year, bs='fs') + s(dPpt, year, bs='fs') + s(dVPM, year, bs='fs') +
+    s(dPowerLine) +  s(herb)+ s(elevation) + s(slope) + s(CENTROID_X, CENTROID_Y, year, bs='fs') + s(temp, year, bs='fs') + s(pPBA, year, bs='fs') + s(pb1Prev, year, bs='fs') + s(pb2Prev, year, bs='fs') + s(pb3Prev, year, bs='fs')", sep=""))
+
+model91 = gam(model91_form, data=dataLong, family=binomial, select=T)
+saveRDS(model91, file = "/home/michael_xiao/R/ss/models/model91.rds")
+
+summary(model91)
+```
+
+```{r}
+toy_x = runif(n=20, min=-10, max=10)
+toy_y = toy_x^3 + rnorm(n=20, mean=0, sd=10)
+df = data.frame(x=toy_x, y=toy_y)
+
+ggplot(data=df, aes(x=x, y=y)) +
+  geom_point() +
+  geom_smooth(method="lm", formula=y~1+x, se=F)
+
+ggplot(data=df, aes(x=x, y=y)) +
+  geom_point() +
+  geom_smooth(method="gam", formula=y~1+s(x), se=F)
+
+```
+
+wf ~ s(ppt, year, bs = "fs") + s(vpma, year, bs = "fs") + s(perc_cloud) + 
+    s(wind_speed) + s(pFederal) + s(pState) + s(dTrail) + s(dTemp, 
+    year, bs = "fs") + s(dPpt, year, bs = "fs") + s(dVPM, year, 
+    bs = "fs") + s(dPowerLine) + s(herb) + s(elevation) + s(slope) + 
+    s(CENTROID_X, CENTROID_Y, year, bs = "fs") + s(temp, year, 
+    bs = "fs") + s(pPBA, year, bs = "fs") + s(pb1Prev, year, 
+    bs = "fs") + s(pb2Prev, year, bs = "fs") + s(pb3Prev, year, 
+    bs = "fs")
+
+
+
+pWFA ~ s(ppt, year, bs = "fs") + s(vpma, year, bs = "fs") + s(perc_cloud) + 
+    s(wind_speed) + s(pop_den) + s(pFederal) + s(pState) + s(dTrail) + 
+    s(dTemp, year, bs = "fs") + s(dPpt, year, bs = "fs") + s(dVPM, 
+    year, bs = "fs") + s(dPowerLine) + s(tree) + s(herb) + s(elevation) + 
+    s(slope) + s(elevation) + s(CENTROID_X, CENTROID_Y, year, 
+    bs = "fs") + s(temp, year, bs = "fs") + s(pPBA, year, bs = "fs") + 
+    s(pb1Prev, year, bs = "fs")
+
+```{r}
+cont_vars = c("ppt", "vpma", "perc_cloud", "wind_speed", "pop_den", "pFederal", "pState", "dTrail", "dTemp", "dPpt", "dVPM", "dPowerLine","tree", "herb", "elevation", "slope", "CENTROID_X", "CENTROID_Y", "year", "pPBA","temp", "pb1Prev")
+
+X_cont = dataLong[cont_vars]
+y_cont = dataLong$pWFA
+
+mod_cont = Predictor$new(model_cont, data=X_cont, y=y_cont)
+imp_cont = FeatureImp$new(mod_cont, loss = "mse")
+
+saveRDS(imp_cont, file="~/R/ss/models/imp_cont.rds")
+
+
+labels_cont = c("y coordiante", "x coordinate", "year", "max vpd deviation", "temperature", "max vpd", "% federal owned", "ppt deviation", "ppt", "% herb", "% tree", "slope", "elevation", "dist powerline", "% cloud", "temperature deviation", "% pb", "% pb 1 year prior", "dist trail", "population density", "wind speed", "% state owned")
+
+plot(imp_cont) + 
+  scale_y_discrete(label=rev(labels_cont))
+
+
+```
+
+
+
+
+
+```{r fig.height=5}
+x_vars = c("temp", "ppt", "vpma", "perc_cloud", "wind_speed", "pFederal", "pState", "dTrail", "dTemp", "dPpt", "dVPM", "dPowerLine", "herb", "elevation", "slope", "CENTROID_X", "CENTROID_Y", "year", "pPBA", "pb1Prev", "pb2Prev", "pb3Prev")
+X = dataLong[x_vars]
+y = dataLong$wf
+
+mod <- Predictor$new(model91, data = X, y = y)
+
+imp <- FeatureImp$new(mod, loss = "mse")
+
+
+
+saveRDS(imp, file="~/R/ss/models/imp_bi.rds")
+
+labels_bin = c("y coordiante", "x coordinate", "% federal owned", "temperature", "% cloud", "elevation", "temperature deviation", "dist trail", "% state owned", "% pb burned", "% pb 3 years ago", "% pb 2 years ago", "% pb 1 year ago", "wind speed", "slope", "ppt deviation", "max vpd deviation", "year", "% herb", "ppt", "max vpd", "dist powerline")
+
+plot(imp) + 
+  facet_zoom(xlim=c(0.9925, 1.005)) + 
+  scale_y_discrete(label=rev(labels_bin)) +
+  theme(text = element_text(size=15))
+
+ggsave(filename="~/R/ss/Plots/imp_bin.png", width=7, height=10, units="in")
+```
+
+```{r}
+labels_bin = c("y coordiante", "x coordinate", "% federal owned", "% cloud", "elevation", "temperature deviation", "dist trail", "% state owned", "% pb burned", "% pb 3 years ago", "% pb 2 years ago", "% pb 1 year ago", "wind speed", "slope", "ppt deviation", "max vpd deviation", "year", "% herb", "ppt", "max vpd", "dist powerline")
+
+```
+
+Approximate significance of smooth terms:
+                                    edf Ref.df   Chi.sq  p-value    
+s(ppt,year)                    21.47979     29  112.333  < 2e-16 ***
+s(vpma,year)                   23.67795     28  167.723  < 2e-16 ***
+s(perc_cloud)                   7.80658      9   40.793  < 2e-16 ***
+s(wind_speed)                   2.30855      9    9.539 0.005310 ** 
+s(pFederal)                     6.15548      9  145.901  < 2e-16 ***
+s(pState)                       3.61030      9   25.985 8.70e-06 ***
+s(dTrail)                       6.35781      9   30.122 1.29e-05 ***
+s(dTemp,year)                  23.91842     28   64.701 4.46e-06 ***
+s(dPpt,year)                   18.84981     28  125.773  < 2e-16 ***
+s(dVPM,year)                   18.94525     28  127.812  < 2e-16 ***
+s(dPowerLine)                   7.79829      9   28.504 0.000275 ***
+s(herb)                         5.98996      9  368.864  < 2e-16 ***
+s(elevation)                    6.57144      9   29.943 1.80e-05 ***
+s(slope)                        6.91942      9   36.108  < 2e-16 ***
+s(CENTROID_X,CENTROID_Y,year) 107.43797    108 1623.482  < 2e-16 ***
+s(temp,year)                   26.39545     28  221.274  < 2e-16 ***
+s(pPBA,year)                   11.32956     28   48.894  < 2e-16 ***
+s(pb1Prev,year)                 0.00536     28    0.007 0.254511    
+s(pb2Prev,year)                 0.84495     28    3.331 0.046703 *  
+s(pb3Prev,year)                12.12403     28   23.244 0.002005 ** 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+```{r}
+concurvity(model_cont)
+```
+
+```{r}
+summary(model91)
+```
+
+
+```{r}
+viz_binary = getViz(model91)
+viz_cont = getViz(model_cont)
+
+p = plot(sm(viz_binary, select=17)) + 
+  l_fitLine() +
+  #xlab("% pb burned") +
+  ylab("log-odds") +
+  ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal() 
+    
+p1 = ggplot() + geom_point(x=x, y=y)
+
+p %+% geom_point(data=dat, aes(x=x, y=y))
+
+print(p1)
+  
+ggplot() +
+  geom_point(aes(x=x,y=y))
+
+ggplot() +
+  geom_point(aes(x=dataLong$pPBA[which(dataLong$pPBA >= 0.25)], y=val[which(dataLong$pPBA >= 0.25), "s(pPBA,year)"]))
+draw(model91, select=16) 
+
+viz_binary
+
+o = plot(sm(viz_binary, select=19))
+listLayers(o)
+plot(model_cont, select=1, scale=0)
+summary(model91)
+
+plot_smooth(model91, view="pPBA", plot_all = "year", rm.ranef = F, shade=F)
+
+listLayers(o)
+
+bin = plot(model91, se=T, scale=0)
+bin[[1]]
+
+val = predict(model91, type = "terms")
+y = val[which(dataLong$pPBA >= 0.25)]
+x = dataLong$pPBA[which(dataLong$pPBA >= 0.25)]
+year = dataLong$year[which(dataLong$pPBA >= 0.25)]
+
+dat = data.frame(x=x, y=y, id=year)
+
+typeof(p)
+
+p$ggObj + geom_point(data=dat, aes(x=x, y=y))
+
+dat %>% filter(id=="2014")
+
+plot(model_cont, scale=0, rug=T)
+
+plot(sm(viz_cont, select=10)) + 
+  l_fitLine() +
+  #xlab("% pb burned") +
+  ylab("log-odds") +
+  ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal() 
+
+hist(dataLong[dataLong$year == "2015", "ppt"] %>% pull())
+y
+
+ plot(sm(viz_binary, select=)) + 
+  l_fitLine() +
+  #xlab("% pb burned") +
+  ylab("log-odds") +
+  ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal() 
+```
+
+```{r}
+cont_fit = predict(model_cont, type="terms")
+x = dataLong$ppt[dataLong$year=="2015"]
+y = cont_fit[which(dataLong$year == "2015", "s(ppt,year)")]
+
+dat_cont = data.frame(x=x, y=y, id="2015")
+
+p_cont = plot(sm(viz_cont, select=1)) + 
+  l_fitLine() +
+  #xlab("% pb burned") +
+  ylab("log-odds") +
+  ggtitle("Fitted Effect of Prescribed Burning (Chance of Ignition)") +
+  theme_minimal() 
+
+p_cont$ggObj %+% geom_point(data=dat_cont, aes(x=x, y=y))
+
+dat_cont
+```
+
+
+
+
+```{r}
+dataLong[which(dataLong$pPBA == 0.958264),]
+
+hist(dataLong[dataLong["year"] == 2013, "ppt"] %>% pull())
+dataLong[dataLong["year"] == 2013, "precip"] %>%
+```
+
+
+```{r}
+covariates = colnames(data)[c(13:30, 51:53, 64:65,118:119)]
+
+wf = data[paste("y20", 10:19, ".pWFA", sep="")]
+wf_mean = apply(wf, MARGIN=1, FUN=mean)
+pb = data[paste("y20", 10:19, ".pPBA", sep="")]
+pb_mean = apply(pb, MARGIN=1, FUN=mean)
+
+
+data_cor = data[covariates]
+data_cor$pb = pb_mean
+
+correlation = apply(data_cor, MARGIN=2, FUN=function(x) {return (cor(x=wf_mean, y=x, method="pearson"))})
+
+correlation
+```
+
+```{r}
+gam.check(model_cont)
+```
+
+
+
+
+linear: pFederal, dPowerLine, ppt, 
+
+```{r}
+plot5 = plot(model91, scale=0, rug=T)
+
+gam.check(model91)
+
+plot(x=plot5[[5]]$x, y=plot5[[5]]$fit)
+
+percent_diff = diff(plot5[[11]]$fit) *100 / plot5[[5]]$fit[1:(length(plot5[[11]]$fit)-1)]
+
+mean(percent_diff/ diff(plot5[[11]]$x))
+
+plot5[[11]]$x
+plot5[[11]]$fit
+
+# larger: ppt, temp
+# smaller: wind speed, dTrail, dPowerLine, tree, 
+
+# cloud, wind speed, pop_den, pState, dTrail, 
+plot(model_cont, scale=0)
+```
+
+
+
 
 
 
