@@ -48,7 +48,12 @@ This model has a deviance explained of over 40%, which is doulbe the value from 
 The main concern is how to intepret the model output. The most important variable, the proportion of a gridcell burned, looks like this:
 
 ```{r, echo=FALSE}
-plot(sm(viz_binary, select=20)) + l_fitLine()
+plot(sm(viz_binary, select=19)) +
+  l_fitLine() +
+  xlab("temperature") +
+  ylab("log-odds") +
+  ggtitle("Fitted Effect of Temperature (Chance of Ignition)") +
+  theme_minimal()
 ```
 
 
@@ -71,7 +76,12 @@ readRDS(file="/home/michael_xiao/R/ss/models/sum_cont.rds")
 This model has a really low deviance explained, which prompts me to think that there are some covariates that are missing from the data. I think I can spin this into a suggesting for future studies. But, again, the issue lies in the interpretability of the model. For percent prescribed burned, the smooths look like this:
 
 ```{r, echo=FALSE}
-plot(sm(viz_cont, select=20)) + l_fitLine()
+plot(sm(viz_cont, select=1)) + 
+  l_fitLine() +
+  #xlab("% pb burned") +
+  ylab("log-odds") +
+  ggtitle("Fitted Effect of Precipitation (Wildfire Scale)") +
+  theme_minimal()
 ```
 
 For 2018, the effect is much larger than other years. And overall, the effect is quite inconsistent across years.
